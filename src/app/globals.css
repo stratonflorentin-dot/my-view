@@ -1,0 +1,264 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-manrope), ui-sans-serif,
+    sans-serif;
+}
+
+:root,
+[data-theme="dark"] {
+  --bg: #0b0e11;
+  --bg-2: #10141a;
+  --panel: rgba(15, 19, 24, 0.92);
+  --panel-solid: #10141a;
+  --line: #232c36;
+  --fg: #e8ecf1;
+  --muted: #8b97a5;
+  --accent: #f0a63c;
+  --accent-ink: #0b0e11;
+  --accent-soft: rgba(240, 166, 60, 0.13);
+  --ok: #3ecf8e;
+  --warn: #e8c547;
+  --bad: #ef6a5a;
+  --hover: rgba(255, 255, 255, 0.06);
+  --input: #141a21;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f4f6f8;
+  --bg-2: #ffffff;
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-solid: #ffffff;
+  --line: #d8dee5;
+  --fg: #171d24;
+  --muted: #5c6a7a;
+  --hover: rgba(0, 0, 0, 0.05);
+  --input: #eef1f4;
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* ------------------------- shared primitives ------------------------- */
+
+.mwm-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.mwm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 0.5rem;
+  transition: color 120ms ease, background 120ms ease;
+  cursor: pointer;
+}
+.mwm-btn:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+.mwm-btn-on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.mwm-btn-on:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.mwm-input {
+  width: 100%;
+  border-radius: 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--input);
+  padding: 0.5rem 0.65rem;
+  font-size: 13px;
+  color: var(--fg);
+  outline: none;
+  transition: border-color 120ms ease;
+}
+.mwm-input::placeholder {
+  color: var(--muted);
+}
+.mwm-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+select.mwm-input {
+  appearance: none;
+}
+
+.mwm-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: 0.6rem;
+  padding: 0.55rem 1rem;
+  transition: opacity 120ms ease;
+  cursor: pointer;
+}
+.mwm-primary:hover {
+  opacity: 0.9;
+}
+.mwm-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mwm-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 0.6rem;
+  padding: 0.55rem 1rem;
+  transition: background 120ms ease;
+  cursor: pointer;
+}
+.mwm-ghost:hover {
+  background: var(--hover);
+}
+
+.mwm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.badge-ok {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
+}
+.badge-warn {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+}
+.badge-bad {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent);
+}
+.badge-muted {
+  color: var(--muted);
+  background: var(--hover);
+  border: 1px solid var(--line);
+}
+
+/* -------------------------- maplibre chrome -------------------------- */
+
+.mwm-root .maplibregl-ctrl-group {
+  background: var(--panel) !important;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.mwm-root .maplibregl-ctrl-group button {
+  width: 30px;
+  height: 30px;
+  background: transparent !important;
+}
+.mwm-root .maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--line) !important;
+}
+.mwm-root .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(0.8) sepia(0.2);
+}
+[data-theme="light"] .mwm-root .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: none;
+}
+.mwm-root .maplibregl-ctrl-attrib {
+  background: rgba(11, 14, 17, 0.7) !important;
+  color: var(--muted) !important;
+  font-size: 10px;
+  border-radius: 0.4rem;
+}
+.mwm-root .maplibregl-ctrl-attrib a {
+  color: #b9c4d0 !important;
+}
+.mwm-root .maplibregl-canvas {
+  outline: none;
+}
+.mwm-root {
+  background: var(--bg-2);
+}
+
+/* ------------------------------ scrollbars ----------------------------- */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------ misc ---------------------------------- */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes mwm-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.gps-dot {
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+.gps-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--ok);
+  animation: mwm-pulse 2s ease-out infinite;
+}
+.gps-dot span {
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: var(--ok);
+  border: 2px solid var(--bg);
+}
