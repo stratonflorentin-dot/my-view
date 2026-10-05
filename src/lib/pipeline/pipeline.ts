@@ -48,6 +48,10 @@ export async function enqueueJob(
     .insert(processingJobs)
     .values({ type, inputRef, priority })
     .returning();
+  // On serverless there is no interval worker — drain the queue after the
+  // response via after(); on long-lived processes this is a no-op tick.
+  const { kickWorker } = await import("./worker");
+  kickWorker();
   return rows[0].id;
 }
 

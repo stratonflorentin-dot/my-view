@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { processingJobs, webhookDeliveries, webhooks } from "@/db/schema";
@@ -29,6 +30,23 @@ export function ensureWorkerStarted() {
     void tick();
   }, 2500);
   iv.unref?.();
+}
+
+/**
+ * Serverless kick: run one worker tick after the current response finishes.
+ * On long-lived processes the interval already covers this; on Vercel
+ * (frozen between requests) this is the only thing that drains the queue.
+ */
+export function kickWorker() {
+  try {
+    // after() throws outside a request scope — e.g. when called from the
+    // worker's own reschedule loop — which we silently ignore.
+    void after(async () => {
+      await tick();
+    });
+  } catch {
+    /* not in a request scope */
+  }
 }
 
 const HANDLERS: Record<string, (job: JobRow) => Promise<void>> = {
