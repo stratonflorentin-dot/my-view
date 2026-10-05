@@ -15,7 +15,9 @@ import { requireRole } from "@/lib/auth";
 
 /** Admin dashboard statistics — all counts are live queries. */
 export async function GET() {
-  await requireRole(["admin"]);
+  if (!(await requireRole(["admin"]))) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
   const [
     buildingsCount,
     buildingsByStatus,

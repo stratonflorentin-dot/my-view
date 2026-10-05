@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { contributorLinks } from "@/db/schema";
-import { clientIp, requireUser } from "@/lib/auth";
+import { clientIp, getSession } from "@/lib/auth";
 import { audit, jsonError, parseJson } from "@/lib/api";
 import { generateToken } from "@/lib/links";
 import { rateLimit } from "@/lib/rate-limit";
@@ -16,7 +16,8 @@ import { fenceFromLink, type Fence } from "@/lib/fence";
  */
 
 export async function GET(req: Request) {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const url = new URL(req.url);
   const projectId = url.searchParams.get("projectId");
   if (projectId) {
@@ -45,7 +46,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const limited = rateLimit(req, "api");
   if (limited) return limited;
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const body = await parseJson<{
     projectId?: string;
     label?: string;

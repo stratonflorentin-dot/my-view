@@ -11,6 +11,7 @@ type Params = { params: Promise<{ id: string }> };
 /** Admin: retry a failed job (resets retry counter). */
 export async function POST(req: Request, { params }: Params) {
   const user = await requireRole(["admin"]);
+  if (!user) return jsonError("Authentication required", 401);
   ensureWorkerStarted();
   const { id } = await params;
   const rows = await db

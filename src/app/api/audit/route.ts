@@ -6,7 +6,9 @@ import { requireRole } from "@/lib/auth";
 
 /** Admin: audit trail. */
 export async function GET(req: Request) {
-  await requireRole(["admin"]);
+  if (!(await requireRole(["admin"]))) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
   const url = new URL(req.url);
   const limit = Math.min(300, Number(url.searchParams.get("limit") ?? 100));
   const rows = await db

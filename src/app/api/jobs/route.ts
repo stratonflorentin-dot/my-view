@@ -6,7 +6,9 @@ import { requireRole } from "@/lib/auth";
 
 /** Admin: processing queue overview. */
 export async function GET(req: Request) {
-  await requireRole(["admin"]);
+  if (!(await requireRole(["admin"]))) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const jobs = await db

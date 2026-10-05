@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { contributorLinks } from "@/db/schema";
-import { clientIp, requireUser } from "@/lib/auth";
+import { clientIp, getSession } from "@/lib/auth";
 import { audit, jsonError, parseJson } from "@/lib/api";
 import { canManage, projectAccess } from "@/lib/tenancy";
 
@@ -13,7 +13,8 @@ type Params = { params: Promise<{ id: string }> };
  * Permission: platform admin, or owner/editor of the link's project.
  */
 export async function POST(req: Request, { params }: Params) {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const { id } = await params;
   const body = await parseJson<{ action?: "revoke" | "restore" | "delete" }>(req);
   const action = body?.action;

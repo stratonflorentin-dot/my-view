@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   if (!projectId) return jsonError("projectId required");
   const user = await getSession();
   const { project, level } = await projectAccess(user, projectId);
-  if (!level && project.visibility !== "public" && project.visibility !== "shared") {
+  if (!project || (!level && project.visibility !== "public" && project.visibility !== "shared")) {
     return jsonError("forbidden", 403);
   }
 

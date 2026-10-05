@@ -61,10 +61,17 @@ export async function requireUser(): Promise<SessionUser> {
   return u;
 }
 
-export async function requireRole(roles: SessionUser["role"][]) {
+/**
+ * Role gate that returns the user or null (never throws). A null return
+ * means either no session (401) or insufficient role (403); routes respond
+ * accordingly.
+ */
+export async function requireRole(
+  roles: SessionUser["role"][],
+): Promise<SessionUser | null> {
   const u = await getSession();
-  if (!u) throw new AuthError("unauthenticated");
-  if (!roles.includes(u.role)) throw new AuthError("forbidden");
+  if (!u) return null;
+  if (!roles.includes(u.role)) return null;
   return u;
 }
 

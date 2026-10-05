@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { projectMembers, projects } from "@/db/schema";
-import { clientIp, requireUser } from "@/lib/auth";
+import { clientIp, getSession } from "@/lib/auth";
 import { audit, jsonError, parseJson } from "@/lib/api";
 import { rateLimit } from "@/lib/rate-limit";
 import { slugify } from "@/lib/tenancy";
 
 /** GET /api/projects — projects the current user owns or is a member of. */
 export async function GET() {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const owned = await db
     .select()
     .from(projects)
@@ -38,7 +39,8 @@ export async function GET() {
 export async function POST(req: Request) {
   const limited = rateLimit(req, "api");
   if (limited) return limited;
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const body = await parseJson<{
     name?: string;
     description?: string;

@@ -18,6 +18,7 @@ export async function GET() {
 /** Admin: platform name, visibility, thresholds. */
 export async function PUT(req: Request) {
   const user = await requireRole(["admin"]);
+  if (!user) return jsonError("Authentication required", 401);
   const body = await parseJson<Record<string, unknown>>(req);
   if (!body) return jsonError("Invalid JSON");
 

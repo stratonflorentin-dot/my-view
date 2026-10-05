@@ -8,7 +8,9 @@ import { rateLimit } from "@/lib/rate-limit";
 
 /** Admin: list accounts. */
 export async function GET() {
-  await requireRole(["admin"]);
+  if (!(await requireRole(["admin"]))) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
   const rows = await db.select().from(users);
   return NextResponse.json({
     users: rows.map((u) => ({
@@ -26,6 +28,7 @@ export async function POST(req: Request) {
   const limited = rateLimit(req, "auth");
   if (limited) return limited;
   const admin = await requireRole(["admin"]);
+  if (!admin) return jsonError("Authentication required", 401);
   const body = await parseJson<{
     email?: string;
     password?: string;

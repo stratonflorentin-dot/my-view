@@ -21,6 +21,7 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function POST(req: Request, { params }: Params) {
   const user = await requireRole(["admin"]);
+  if (!user) return jsonError("Authentication required", 401);
   ensureWorkerStarted();
   const { id } = await params;
   const body = await parseJson<{

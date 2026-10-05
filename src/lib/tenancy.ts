@@ -7,12 +7,9 @@ import type { SessionUser } from "./auth";
 export type ProjectRow = typeof projects.$inferSelect;
 export type AccessLevel = "owner" | "editor" | "contributor" | "viewer" | null;
 
-export class ForbiddenError extends Error {
-  status = 403;
-}
-export class NotFoundError extends Error {
-  status = 404;
-}
+export type AccessResult =
+  | { project: ProjectRow; level: AccessLevel }
+  | { project: null; level: null };
 
 const rank: Record<string, number> = {
   viewer: 0,
@@ -29,18 +26,18 @@ export function canManage(level: Exclude<AccessLevel, null>): boolean {
   return level === "owner" || level === "editor";
 }
 
-/** Resolve the current user's access level on a project. */
+/** Resolve the current user's access level on a project (never throws). */
 export async function projectAccess(
   user: SessionUser | null,
   projectId: string,
-): Promise<{ project: ProjectRow; level: AccessLevel }> {
+): Promise<AccessResult> {
   const rows = await db
     .select()
     .from(projects)
     .where(eq(projects.id, projectId))
     .limit(1);
   const project = rows[0];
-  if (!project) throw new NotFoundError("Project not found");
+  if (!project) return { project: null, level: null };
 
   let level: AccessLevel = null;
   if (user) {
@@ -63,15 +60,27 @@ export async function projectAccess(
   return { project, level };
 }
 
-/** Require an authenticated user with at least the given level. */
+export type RequireResult =
+  | { ok: true; project: ProjectRow; level: Exclude<AccessLevel, null> }
+  | { ok: false; status: 403 | 404 | 401; error: string };
+
+/** Require a user with at least the given level. Returns an error result
+ * instead of throwing, so route handlers can respond cleanly. */
 export async function requireProject(
   user: SessionUser | null,
   projectId: string,
   min: "viewer" | "contributor" | "editor" | "owner",
-): Promise<{ project: ProjectRow; level: Exclude<AccessLevel, null> }> {
+): Promise<RequireResult> {
   const { project, level } = await projectAccess(user, projectId);
-  if (!level || rank[level] < rank[min]) throw new ForbiddenError("forbidden");
-  return { project, level: level as Exclude<AccessLevel, null> };
+  if (!project) return { ok: false, status: 404, error: "Project not found" };
+  if (!level || rank[level] < rank[min]) {
+    return {
+      ok: false,
+      status: level ? 403 : 401,
+      error: level ? "forbidden" : "Authentication required",
+    };
+  }
+  return { ok: true, project, level: level as Exclude<AccessLevel, null> };
 }
 
 /** Projects visible to a user: owned, member of, or (public/shared) to all. */

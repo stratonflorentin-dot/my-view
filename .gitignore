@@ -32,3 +32,5 @@ Thumbs.db
 # Sensitive files (auto-detected)
 .env.example
 
+.env.local 
+drizzle.config.json

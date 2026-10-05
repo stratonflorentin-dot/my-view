@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { buildings, contributorLinks, mapObjects, projectMembers, projects, submissions } from "@/db/schema";
-import { clientIp, requireUser } from "@/lib/auth";
+import { clientIp, getSession } from "@/lib/auth";
 import { audit, jsonError, parseJson } from "@/lib/api";
 import { canManage, requireProject } from "@/lib/tenancy";
 
@@ -10,9 +10,12 @@ type Params = { params: Promise<{ id: string }> };
 
 /** GET /api/projects/:id — project detail + summary counts. */
 export async function GET(_req: Request, { params }: Params) {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const { id } = await params;
-  const { project, level } = await requireProject(user, id, "viewer");
+  const acc = await requireProject(user, id, "viewer");
+  if (!acc.ok) return jsonError(acc.error, acc.status);
+  const { project, level } = acc;
 
   const [buildingCount, objectCount, pendingCount, memberRows] = await Promise.all([
     db.select({ id: buildings.id }).from(buildings).where(eq(buildings.projectId, id)),
@@ -47,9 +50,12 @@ export async function GET(_req: Request, { params }: Params) {
 
 /** PATCH /api/projects/:id — update settings (owner/editor only). */
 export async function PATCH(req: Request, { params }: Params) {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const { id } = await params;
-  const { project, level } = await requireProject(user, id, "viewer");
+  const acc = await requireProject(user, id, "viewer");
+  if (!acc.ok) return jsonError(acc.error, acc.status);
+  const { project, level } = acc;
   if (!canManage(level)) return jsonError("Only project owners and editors can update", 403);
 
   const body = await parseJson<{
@@ -81,9 +87,12 @@ export async function PATCH(req: Request, { params }: Params) {
 
 /** DELETE /api/projects/:id — archive (owner only; nothing is destroyed). */
 export async function DELETE(req: Request, { params }: Params) {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const { id } = await params;
-  const { project } = await requireProject(user, id, "viewer");
+  const acc = await requireProject(user, id, "viewer");
+  if (!acc.ok) return jsonError(acc.error, acc.status);
+  const { project } = acc;
   if (project.ownerId !== user.sub && user.role !== "admin") {
     return jsonError("Only the project owner can archive a project", 403);
   }
@@ -97,9 +106,12 @@ export async function DELETE(req: Request, { params }: Params) {
 
 /** PUT /api/projects/:id — add a member (owner/editor only). */
 export async function PUT(req: Request, { params }: Params) {
-  const user = await requireUser();
+  const user = await getSession();
+  if (!user) return jsonError("Authentication required", 401);
   const { id } = await params;
-  const { level } = await requireProject(user, id, "viewer");
+  const acc = await requireProject(user, id, "viewer");
+  if (!acc.ok) return jsonError(acc.error, acc.status);
+  const { level } = acc;
   if (!canManage(level)) return jsonError("Only owners and editors can add members", 403);
   const body = await parseJson<{ userId?: string; role?: "editor" | "contributor" | "viewer" }>(req);
   if (!body?.userId) return jsonError("userId required");

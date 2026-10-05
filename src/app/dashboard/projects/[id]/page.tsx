@@ -14,6 +14,6 @@ export default async function ProjectPage({
   const { id } = await params;
   if (!user) redirect(`/login?next=/dashboard/projects/${id}`);
   const { level, project } = await projectAccess(user, id);
-  if (!level) redirect("/dashboard");
+  if (!level || !project) redirect("/dashboard");
   return <ProjectWorkspace me={user} projectId={project.id} access={level} />;
 }
