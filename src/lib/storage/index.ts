@@ -58,8 +58,10 @@ class VercelBlobStorage implements ObjectStorage {
   }
   async put(key: string, data: Buffer, mime: string) {
     const blob = await this.client();
+    // Private access: reads go through the authenticated get() below —
+    // the app serves files via signed /api/files URLs, never blob URLs.
     await blob.put(key, data, {
-      access: "public",
+      access: "private",
       contentType: mime,
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -67,11 +69,16 @@ class VercelBlobStorage implements ObjectStorage {
   }
   async get(key: string): Promise<Buffer | null> {
     const blob = await this.client();
-    const head = await blob.head(key).catch(() => null);
-    if (!head) return null;
-    const res = await fetch(head.url);
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    const res = await blob.get(key, { access: "private" }).catch(() => null);
+    if (!res || res.statusCode !== 200) return null;
+    const chunks: Buffer[] = [];
+    const reader = res.stream.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks);
   }
   async delete(key: string) {
     const blob = await this.client();

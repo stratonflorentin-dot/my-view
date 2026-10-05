@@ -77,22 +77,38 @@ const BYPASS = process.env.BYPASS_TOKEN
     }),
   });
   console.log("capture with real jpeg:", cap.status, cap.status >= 400 ? JSON.stringify(cap.body).slice(0, 200) : "accepted");
-  const captureId = cap.body?.capture?.id;
+  const captureId = cap.body?.captureId;
 
   // 5. Wait for background processing (sharp + blob on serverless)
   for (let i = 0; i < 12; i++) {
     await new Promise((res) => setTimeout(res, 5000));
     const st = await req("/api/captures/" + captureId);
-    if (st.body?.capture) {
-      const c = st.body.capture;
-      console.log(`t=${(i + 1) * 5}s status=${c.status} quality=${c.qualityJson ? "present" : "none"} thumb=${c.thumbKey || c.thumbnailKey || "-"}`);
-      if (c.status !== "processing") break;
+    if (st.status === 200 && st.body) {
+      const c = st.body;
+      console.log(`t=${(i + 1) * 5}s status=${c.status} duplicate=${c.duplicate} quality=${c.quality?.sharpness ?? "-"}`);
+      if (c.status !== "processing" && c.status !== "received") break;
     } else {
       console.log(`t=${(i + 1) * 5}s status-check:`, st.status, JSON.stringify(st.body).slice(0, 120));
     }
   }
 
-  // 6. Submissions queue should now hold the capture
+  // 6. Contributor submits the session for review
+  const subm = await req("/api/submissions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId,
+      kind: "building",
+      name: "Test Warehouse A",
+      category: "warehouse",
+      description: "Live pipeline test submission",
+      lat: -6.7924,
+      lng: 39.2083,
+    }),
+  });
+  console.log("submit session:", subm.status, subm.status >= 400 ? JSON.stringify(subm.body).slice(0, 200) : "submitted");
+
+  // 7. Review queue should now hold it
   const sub = await req("/api/submissions?projectId=" + pid + "&status=pending");
   console.log("submissions pending:", sub.status, sub.body?.submissions?.length ?? 0);
 })().catch((e) => {
