@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { clientIp, SESSION_COOKIE, SESSION_TTL_SEC, signSession } from "@/lib/auth";
+import { clientIp, isAdminEmail, SESSION_COOKIE, SESSION_TTL_SEC, signSession } from "@/lib/auth";
 import { audit } from "@/lib/api";
 import { GOOGLE_STATE_COOKIE, googleOAuthConfigured, googleRedirectUri, appOrigin } from "../route";
 
@@ -74,7 +74,9 @@ export async function GET(req: Request) {
     return fail(origin, "Your Google account has no verified email");
 
   // Find by Google id, else by email (link), else create a viewer account.
+  // ADMIN_EMAIL addresses are promoted to admin on every Google sign-in.
   let created = false;
+  const role = isAdminEmail(email) ? "admin" : "viewer";
   let row = (
     await db.select().from(users).where(eq(users.googleId, profile.sub)).limit(1)
   )[0];
@@ -86,7 +88,7 @@ export async function GET(req: Request) {
       row = (
         await db
           .update(users)
-          .set({ googleId: profile.sub })
+          .set({ googleId: profile.sub, ...(role !== byEmail.role ? { role } : {}) })
           .where(eq(users.id, byEmail.id))
           .returning()
       )[0];
@@ -100,7 +102,7 @@ export async function GET(req: Request) {
             passwordHash: null,
             googleId: profile.sub,
             displayName: (profile.name || email.split("@")[0]).slice(0, 120),
-            role: "viewer",
+            role,
           })
           .returning()
       )[0];

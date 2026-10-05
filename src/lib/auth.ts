@@ -87,3 +87,15 @@ export function clientIp(req: Request): string {
   const fwd = req.headers.get("x-forwarded-for");
   return (fwd?.split(",")[0]?.trim() as string) || req.headers.get("x-real-ip") || "unknown";
 }
+
+/**
+ * Admin allowlist: emails in ADMIN_EMAIL (comma-separated) are granted the
+ * admin role at sign-up and promoted on sign-in. Empty by default.
+ */
+export function isAdminEmail(email: string): boolean {
+  const list = (process.env.ADMIN_EMAIL || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(email.trim().toLowerCase());
+}

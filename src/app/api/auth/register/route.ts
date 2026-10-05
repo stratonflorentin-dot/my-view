@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import {
   hashPassword,
+  isAdminEmail,
   SESSION_COOKIE,
   SESSION_TTL_SEC,
   signSession,
@@ -11,8 +12,8 @@ import {
 import { jsonError, parseJson } from "@/lib/api";
 import { rateLimit } from "@/lib/rate-limit";
 
-/** Public registration — always creates a viewer account. Admins promote
- *  accounts in the dashboard. */
+/** Public registration — creates a viewer account (admin if the email is in
+ *  ADMIN_EMAIL). Admins promote accounts in the dashboard. */
 export async function POST(req: Request) {
   const limited = rateLimit(req, "auth");
   if (limited) return limited;
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
       email,
       passwordHash: await hashPassword(password),
       displayName: name.slice(0, 120),
-      role: "viewer",
+      role: isAdminEmail(email) ? "admin" : "viewer",
     })
     .returning();
   const user = rows[0];
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
     sub: user.id,
     email: user.email,
     name: user.displayName,
-    role: "viewer",
+    role: user.role,
   });
   const res = NextResponse.json(
     {
