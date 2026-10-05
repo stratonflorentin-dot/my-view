@@ -31,9 +31,15 @@ export async function POST(req: Request) {
     .where(eq(users.email, email))
     .limit(1);
   const user = rows[0];
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return jsonError("Invalid credentials", 401);
+  if (!user || !user.passwordHash) {
+    // Google-only accounts have no local password.
+    return jsonError(
+      user ? "This account uses Google sign-in" : "Invalid credentials",
+      401,
+    );
   }
+  if (!(await verifyPassword(password, user.passwordHash)))
+    return jsonError("Invalid credentials", 401);
   const token = await signSession({
     sub: user.id,
     email: user.email,

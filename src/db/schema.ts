@@ -30,7 +30,10 @@ export const userRole = pgEnum("user_role", ["admin", "contributor", "viewer"]);
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // Null for accounts that only sign in with Google.
+  passwordHash: text("password_hash"),
+  // Google OAuth subject (`sub` claim) when the account is linked.
+  googleId: varchar("google_id", { length: 64 }).unique(),
   displayName: varchar("display_name", { length: 120 }).notNull(),
   role: userRole("role").notNull().default("viewer"),
   createdAt: timestamp("created_at", { withTimezone: true })
