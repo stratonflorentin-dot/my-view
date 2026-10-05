@@ -34,3 +34,5 @@ Thumbs.db
 
 .env.local 
 drizzle.config.json
+.vercel
+.env*

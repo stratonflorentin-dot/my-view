@@ -44,7 +44,54 @@ class LocalObjectStorage implements ObjectStorage {
   }
 }
 
-export const storage: ObjectStorage = new LocalObjectStorage();
+/**
+ * Vercel Blob driver (STORAGE_DRIVER=vercel-blob). Requires
+ * BLOB_READ_WRITE_TOKEN — create a store with `vercel storage create
+ * <name> --type blob` and connect it to the project.
+ */
+class VercelBlobStorage implements ObjectStorage {
+  private mod: Promise<typeof import("@vercel/blob")> | null = null;
+  private client() {
+    // Dynamic import keeps the dependency optional at build time.
+    this.mod ??= import("@vercel/blob");
+    return this.mod;
+  }
+  async put(key: string, data: Buffer, mime: string) {
+    const blob = await this.client();
+    await blob.put(key, data, {
+      access: "public",
+      contentType: mime,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+  }
+  async get(key: string): Promise<Buffer | null> {
+    const blob = await this.client();
+    const head = await blob.head(key).catch(() => null);
+    if (!head) return null;
+    const res = await fetch(head.url);
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  }
+  async delete(key: string) {
+    const blob = await this.client();
+    await blob.del(key).catch(() => {});
+  }
+  async exists(key: string) {
+    const blob = await this.client();
+    return (await blob.head(key).catch(() => null)) !== null;
+  }
+  async size(key: string) {
+    const blob = await this.client();
+    const head = await blob.head(key).catch(() => null);
+    return head ? head.size : null;
+  }
+}
+
+export const storage: ObjectStorage =
+  process.env.STORAGE_DRIVER === "vercel-blob"
+    ? new VercelBlobStorage()
+    : new LocalObjectStorage();
 
 /* ------------------------- signed URLs ------------------------- */
 
