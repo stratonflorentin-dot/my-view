@@ -62,6 +62,31 @@ const TYPE_LABEL: Record<string, string> = {
   manual: "Manual",
 };
 
+/** Group captures by rough cardinal direction from their heading. */
+function groupCapturesByAngle(captures: Detail["captures"]) {
+  const groups: Record<string, Detail["captures"]> = {
+    front: [],
+    right: [],
+    rear: [],
+    left: [],
+    other: [],
+  };
+  for (const c of captures) {
+    const h = c.gpsHeading;
+    if (h == null) {
+      groups.other.push(c);
+      continue;
+    }
+    const norm = ((h % 360) + 360) % 360;
+    if (norm >= 315 || norm < 45) groups.front.push(c);
+    else if (norm >= 45 && norm < 135) groups.right.push(c);
+    else if (norm >= 135 && norm < 225) groups.rear.push(c);
+    else if (norm >= 225 && norm < 315) groups.left.push(c);
+    else groups.other.push(c);
+  }
+  return groups;
+}
+
 export function MapPageShell({
   visibility,
   initialBuildingId = null,
@@ -228,8 +253,8 @@ export function MapPageShell({
                       detail.building.status === "approved"
                         ? "badge-ok"
                         : detail.building.status === "rejected"
-                          ? "badge-bad"
-                          : "badge-warn"
+                        ? "badge-bad"
+                        : "badge-warn"
                     }`}
                   >
                     {detail.building.status}
@@ -243,8 +268,8 @@ export function MapPageShell({
                         latest.confidence >= 0.6
                           ? "badge-ok"
                           : latest.confidence >= 0.35
-                            ? "badge-warn"
-                            : "badge-bad"
+                          ? "badge-warn"
+                          : "badge-bad"
                       }`}
                     >
                       confidence {Math.round(latest.confidence * 100)}%
@@ -311,58 +336,60 @@ export function MapPageShell({
                 <h3 className="mt-4 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
                   Captures ({detail.captures.length})
                 </h3>
-                <ul className="mt-1.5 space-y-2">
-                  {detail.captures.map((c) => (
-                    <li key={c.id} className="flex gap-2.5">
-                      {c.thumbnailUrl ? (
-                        <a href={c.thumbnailUrl} target="_blank" rel="noreferrer" className="shrink-0">
-                          <img
-                            src={c.thumbnailUrl}
-                            alt="capture"
-                            className="h-14 w-14 rounded-md object-cover ring-1 ring-[var(--line)]"
-                          />
-                        </a>
-                      ) : (
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-[var(--hover)] text-[10px] text-[var(--muted)]">
-                          video
-                        </div>
-                      )}
-                      <div className="min-w-0 text-[11px]">
-                        <p className="flex items-center gap-1.5">
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              c.status === "processed"
-                                ? "bg-[var(--ok)]"
-                                : c.status === "rejected"
-                                  ? "bg-[var(--bad)]"
-                                  : "bg-[var(--warn)]"
-                            }`}
-                          />
-                          {c.status}
-                          {c.gpsHAccuracy != null && (
-                            <span className="text-[var(--muted)] tabular">
-                              · GPS ±{Math.round(c.gpsHAccuracy)} m
-                            </span>
-                          )}
-                          {c.gpsHeading != null && (
-                            <span className="text-[var(--muted)] tabular">
-                              · {Math.round(c.gpsHeading)}°
-                            </span>
-                          )}
-                        </p>
-                        <p className="mt-0.5 truncate text-[var(--muted)] tabular">
-                          {c.gpsLat?.toFixed(5)}, {c.gpsLng?.toFixed(5)}
-                          {c.gpsAltitude != null && ` · ${Math.round(c.gpsAltitude)} m`}
-                        </p>
-                        {Array.isArray(c.quality?.issues) && (
-                          <p className="mt-0.5 text-[10px] text-[var(--warn)]">
-                            {(c.quality?.issues as string[]).join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                {(() => {
+                  const groups = groupCapturesByAngle(detail.captures);
+                  const order = [
+                    ["front", "Front"],
+                    ["right", "Right"],
+                    ["rear", "Rear"],
+                    ["left", "Left"],
+                    ["other", "Other"],
+                  ];
+                  return (
+                    <div className="mt-2 space-y-3">
+                      {order.map(([key, label]) => {
+                        const arr = groups[key];
+                        if (!arr.length) return null;
+                        return (
+                          <div key={key} className="space-y-1.5">
+                            <p className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-[0.1em]">
+                              {label} ({arr.length})
+                            </p>
+                            <div className="flex gap-2 overflow-x-auto pb-1">
+                              {arr.map((c) => (
+                                <a
+                                  key={c.id}
+                                  href={c.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="shrink-0 group"
+                                  title={`GPS ±${c.gpsHAccuracy ?? "?"}m · ${c.gpsHeading != null ? Math.round(c.gpsHeading) + "°" : "no heading"}`}
+                                >
+                                  <div className="relative h-20 w-20 rounded-md overflow-hidden ring-1 ring-[var(--line)] group-hover:ring-[var(--accent)] transition">
+                                    {c.thumbnailUrl ? (
+                                      <img
+                                        src={c.thumbnailUrl}
+                                        alt={`capture ${c.id.slice(0, 8)}`}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="flex h-full w-full items-center justify-center bg-[var(--hover)] text-[10px] text-[var(--muted)]">
+                                        video
+                                      </div>
+                                    )}
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1 text-[9px] text-white">
+                                      {c.gpsHAccuracy != null && `±${Math.round(c.gpsHAccuracy)}m`}
+                                    </div>
+                                  </div>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 <h3 className="mt-4 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
                   Contributors
