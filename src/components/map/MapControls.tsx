@@ -19,6 +19,9 @@ type Props = {
   searchOpen: boolean;
   onSearchOpen: (o: boolean) => void;
   onPick: (t: { lng: number; lat: number; buildingId?: string; label: string }) => void;
+  onLocate: () => void;
+  locating: boolean;
+  tracking: boolean;
 };
 
 const Icon2D = () => (
@@ -62,6 +65,13 @@ const IconLayers = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="m12 2 10 6-10 6L2 8l10-6Z" />
     <path d="m2 14 10 6 10-6" />
+  </svg>
+);
+const IconLocate = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <circle cx="12" cy="12" r="3.5" />
+    <circle cx="12" cy="12" r="7.5" strokeDasharray="2.5 3" />
+    <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" />
   </svg>
 );
 
@@ -133,6 +143,16 @@ export function MapControls(p: Props) {
         style={{ top: "var(--mwm-controls-top, 0.75rem)" }}
       >
         <div className="flex gap-1">
+          <button
+            type="button"
+            className={`mwm-panel mwm-btn ${p.tracking ? "mwm-btn-sel" : ""}`}
+            onClick={p.onLocate}
+            title={p.tracking ? "My location" : "Show my location"}
+            aria-pressed={p.tracking}
+            disabled={p.locating}
+          >
+            <IconLocate />
+          </button>
           <button
             type="button"
             className={`mwm-panel mwm-btn ${p.searchOpen ? "mwm-btn-sel" : ""}`}

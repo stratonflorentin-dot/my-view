@@ -185,6 +185,10 @@ pre {
   background: var(--hover);
   border-color: var(--line);
 }
+.mwm-btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
 
 .mwm-btn-on {
   background: var(--accent);

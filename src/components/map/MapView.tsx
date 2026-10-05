@@ -82,6 +82,30 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
   features: [],
 };
 
+/** Approximate circle of `accuracyM` radius around a point (equirectangular —
+ *  fine at the city scales an accuracy circle spans). */
+function accuracyCircle(lng: number, lat: number, accuracyM: number): GeoJSON.FeatureCollection {
+  const r = Math.min(Math.max(accuracyM, 8), 20000);
+  const dx = r / (111320 * Math.cos((lat * Math.PI) / 180));
+  const dy = r / 110574;
+  const ring: [number, number][] = [];
+  for (let i = 0; i < 64; i++) {
+    const t = (i / 64) * 2 * Math.PI;
+    ring.push([lng + dx * Math.cos(t), lat + dy * Math.sin(t)]);
+  }
+  ring.push(ring[0]);
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "Polygon", coordinates: [ring] },
+      },
+    ],
+  };
+}
+
 export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
   { preview = false, selectedId = null, onSelectBuilding, onMapReady },
   ref,
@@ -93,6 +117,12 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
   const [terrain, setTerrain] = useState(false);
   const [layers, setLayers] = useState({ buildings: true, captures: false, coverage: true });
   const [searchOpen, setSearchOpen] = useState(false);
+  const [userLoc, setUserLoc] = useState<{ lng: number; lat: number; accuracy: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [tracking, setTracking] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const watchRef = useRef<number | null>(null);
   /** Set once the MapLibre style has fully loaded — every style-mutating
    *  effect must wait for this, or MapLibre throws "Style is not done
    *  loading" and React unmounts the whole tree. */
@@ -424,6 +454,51 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
     }
   }, [layers, mode, loaded]);
 
+  // User-location accuracy circle: source+layers once, data on every fix.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    if (map.getSource("user-accuracy")) return;
+    map.addSource("user-accuracy", { type: "geojson", data: EMPTY_FC });
+    map.addLayer({
+      id: "user-accuracy-fill",
+      type: "fill",
+      source: "user-accuracy",
+      paint: { "fill-color": "#35c48b", "fill-opacity": 0.14 },
+    });
+    map.addLayer({
+      id: "user-accuracy-line",
+      type: "line",
+      source: "user-accuracy",
+      paint: { "line-color": "#35c48b", "line-width": 1, "line-opacity": 0.55 },
+    });
+  }, [loaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded || !userLoc) return;
+    const src = map.getSource("user-accuracy") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    src.setData(accuracyCircle(userLoc.lng, userLoc.lat, userLoc.accuracy));
+  }, [userLoc, loaded]);
+
+  // Auto-clear the location error chip.
+  useEffect(() => {
+    if (!locError) return;
+    const t = setTimeout(() => setLocError(null), 5000);
+    return () => clearTimeout(t);
+  }, [locError]);
+
+  // Stop tracking and drop the marker on unmount.
+  useEffect(
+    () => () => {
+      if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+    },
+    [],
+  );
+
   // Selection highlight via feature-state
   useEffect(() => {
     const map = mapRef.current;
@@ -459,10 +534,85 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
           searchOpen={searchOpen}
           onSearchOpen={setSearchOpen}
           onPick={fly}
+          onLocate={locate}
+          locating={locating}
+          tracking={tracking}
         />
+      )}
+      {locError && (
+        <div
+          className="mwm-panel absolute right-3 z-30 max-w-[min(20rem,calc(100vw-1.5rem))] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--bad)]"
+          style={{ top: "calc(var(--mwm-controls-top, 0.75rem) + 2.6rem)" }}
+        >
+          {locError}
+        </div>
       )}
     </div>
   );
+
+  function applyFix(pos: GeolocationPosition, opts: { fly?: boolean } = {}) {
+    const map = mapRef.current;
+    if (!map) return;
+    const { longitude, latitude, accuracy } = pos.coords;
+    setUserLoc({ lng: longitude, lat: latitude, accuracy: accuracy ?? 0 });
+    if (!userMarkerRef.current) {
+      const el = document.createElement("div");
+      el.className = "gps-dot";
+      el.appendChild(document.createElement("span"));
+      userMarkerRef.current = new maplibregl.Marker({ element: el })
+        .setLngLat([longitude, latitude])
+        .addTo(map);
+    } else {
+      userMarkerRef.current.setLngLat([longitude, latitude]);
+    }
+    if (opts.fly) {
+      map.flyTo({ center: [longitude, latitude], zoom: 16.5, duration: 1400 });
+    }
+  }
+
+  function startWatch() {
+    if (watchRef.current != null) return;
+    watchRef.current = navigator.geolocation.watchPosition(
+      (pos) => applyFix(pos),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000 },
+    );
+  }
+
+  function locate() {
+    const map = mapRef.current;
+    if (!map || locating) return;
+    setLocError(null);
+    if (!("geolocation" in navigator)) {
+      setLocError("This browser does not support location.");
+      return;
+    }
+    // Already tracking — recentre on the latest fix.
+    if (userLoc && watchRef.current != null) {
+      map.flyTo({ center: [userLoc.lng, userLoc.lat], zoom: 16.5, duration: 1400 });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        setTracking(true);
+        applyFix(pos, { fly: true });
+        startWatch();
+      },
+      (err) => {
+        setLocating(false);
+        setLocError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied — allow it in your browser settings and try again."
+            : err.code === err.TIMEOUT
+              ? "Could not get a GPS fix. Try moving outdoors or somewhere with a clearer view of the sky."
+              : "Location is unavailable right now.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+    );
+  }
 
   function fly(target: { lng: number; lat: number; buildingId?: string; label: string }) {
     const map = mapRef.current;
