@@ -627,21 +627,27 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const [usage, setUsage] = useState<Record<string, Usage>>({});
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const create = async () => {
     setBusy(true);
+    setError(null);
     try {
       const r = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, name, type, scopes }),
       });
-      const j = await r.json();
-      if (r.ok) {
-        setNewSecret(j.secret ?? j.publicKey);
+      const j = await r.json().catch(() => ({}) as { secret?: string; publicKey?: string; error?: string });
+      if (r.ok && (j.secret || j.publicKey)) {
+        setNewSecret(j.secret ?? j.publicKey ?? null);
         setCreating(false);
         setName("");
+      } else {
+        setError(j.error || `Could not create the key (HTTP ${r.status}).`);
       }
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -672,7 +678,7 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
       <div className="flex items-center justify-between">
         <h1 className="font-display text-lg font-semibold">API keys</h1>
         {canManage && (
-          <button type="button" className="mwm-btn mwm-btn-on" onClick={() => setCreating(true)}>
+          <button type="button" className="mwm-btn mwm-btn-on" onClick={() => { setError(null); setCreating(true); }}>
             + Create key
           </button>
         )}
@@ -720,6 +726,11 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
               ))}
             </div>
           </div>
+          {error && (
+            <p className="rounded border border-[var(--bad)] bg-[var(--bg-2)] p-2 text-[12px] text-[var(--bad)]">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2">
             <button type="button" className="mwm-primary" disabled={!name.trim() || busy} onClick={create}>
               {busy ? "Creating…" : "Create key"}
@@ -737,6 +748,7 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-display text-[13.5px] font-semibold">{k.name}</p>
               <span className={`mwm-badge ${k.status === "active" ? "badge-ok" : "badge-bad"}`}>{k.status}</span>
+              <span className="mwm-badge badge-muted">{k.secretPrefix ? "secret" : "public"}</span>
               <code className="text-[11px] text-[var(--muted)]">{k.publicKey.slice(0, 20)}…</code>
               <span className="ml-auto text-[11px] text-[var(--muted)]">
                 {k.lastUsedAt ? `last used ${new Date(k.lastUsedAt).toLocaleString()}` : "never used"}

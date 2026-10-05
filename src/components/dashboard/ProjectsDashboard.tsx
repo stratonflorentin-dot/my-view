@@ -147,7 +147,8 @@ export default function ProjectsDashboard({ me }: { me: Me }) {
           {projects === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
           {projects?.length === 0 && !creating && (
             <p className="text-sm text-[var(--muted)]">
-              No projects yet — create your first map project to start scanning.
+              No projects yet — create your first map project to start scanning. API keys live
+              inside a map project, on its Developers tab.
             </p>
           )}
           {projects?.map((p) => (
