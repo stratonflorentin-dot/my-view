@@ -53,3 +53,41 @@ are token-based and unauthenticated by design.
 | GET/POST | `/api/users` | List / create accounts (any role). |
 | GET/PUT | `/api/settings` | Platform name, visibility, GPS threshold, multi-view minimum. |
 | GET | `/api/audit` | Audit trail. |
+
+## Projects & multi-tenancy
+
+| Method | Path | Notes |
+|---|---|---|
+| GET/POST | `/api/projects` | List own/member projects · create (name, visibility, center). |
+| GET/PATCH/DELETE/PUT | `/api/projects/{id}` | Detail+stats · update · archive · add member. Authorization via `src/lib/tenancy.ts` (owner > editor > contributor > viewer). |
+| GET/POST/DELETE | `/api/forms` | Custom form definitions per project (templates: `real_estate`, `logistics`, `agriculture`). |
+| GET/POST/PATCH/DELETE | `/api/objects` | Generic map objects (GeoJSON Point/LineString/Polygon). |
+| GET/POST | `/api/submissions` | Review queue (`?projectId=&status=`) · finalize a capture session into a submission (custom-form validated server-side). |
+| PATCH | `/api/submissions/{id}` | `approve` (creates map object) / `reject` / `needs_imagery` / `note`. |
+| GET/POST | `/api/keys` | API keys. The raw secret is returned **exactly once** at creation. |
+| POST/GET | `/api/keys/{id}` | `rename`/`rotate`/`restrict`/`expire`/`revoke`/`restore` + usage stats. |
+| GET/POST/PATCH/DELETE | `/api/webhooks` | Project webhooks (HMAC-signed deliveries, retries). |
+
+## Public Map API (`/api/v1`) — API-key auth
+
+`Authorization: Bearer mk_secret_…` (server) or `mk_public_…` (browser,
+read-only, origin-restricted). Keys are scoped to exactly one project;
+cross-project access is impossible. Every call is recorded for usage
+analytics and rate-limited per key/plan.
+
+| Method | Path | Scope |
+|---|---|---|
+| GET | `/api/v1/maps` | `maps:read` |
+| GET | `/api/v1/maps/{mapId}` | `maps:read` |
+| GET | `/api/v1/maps/{mapId}/buildings` | `buildings:read` |
+| GET | `/api/v1/maps/{mapId}/locations` | `locations:read` |
+| GET | `/api/v1/maps/{mapId}/models` | `models:read` |
+| GET | `/api/v1/maps/{mapId}/coverage` | `maps:read` |
+| GET | `/api/v1/buildings/{buildingId}` | `buildings:read` |
+| GET | `/api/v1/locations/{locationId}` | `locations:read` |
+| GET | `/api/v1/models/{modelId}` | `models:read` |
+
+Scopes: `maps:*`, `buildings:*`, `locations:*`, `models:*`,
+`analytics:read` (`:read`/`:write` on each resource). All responses are
+real database rows — no fixtures. JavaScript client: `sdk/mymap.js`
+(`sdk/README.md`).

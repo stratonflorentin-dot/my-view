@@ -2,18 +2,20 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { contributorLinks } from "@/db/schema";
-import { clientIp, requireRole } from "@/lib/auth";
+import { clientIp, requireUser } from "@/lib/auth";
 import { audit, jsonError, parseJson } from "@/lib/api";
+import { canManage, projectAccess } from "@/lib/tenancy";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Admin: revoke / restore / delete a contributor link. */
+/**
+ * Revoke / restore / delete a scan link.
+ * Permission: platform admin, or owner/editor of the link's project.
+ */
 export async function POST(req: Request, { params }: Params) {
-  const user = await requireRole(["admin"]);
+  const user = await requireUser();
   const { id } = await params;
-  const body = await parseJson<{ action?: "revoke" | "restore" | "delete" }>(
-    req,
-  );
+  const body = await parseJson<{ action?: "revoke" | "restore" | "delete" }>(req);
   const action = body?.action;
   const rows = await db
     .select()
@@ -22,6 +24,13 @@ export async function POST(req: Request, { params }: Params) {
     .limit(1);
   const link = rows[0];
   if (!link) return jsonError("Link not found", 404);
+
+  if (link.projectId) {
+    const { level } = await projectAccess(user, link.projectId);
+    if (!level || !canManage(level)) return jsonError("forbidden", 403);
+  } else if (user.role !== "admin") {
+    return jsonError("forbidden", 403);
+  }
 
   if (action === "revoke") {
     await db

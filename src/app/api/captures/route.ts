@@ -8,8 +8,8 @@ import {
   gpsFixes,
 } from "@/db/schema";
 import { getSettings } from "@/lib/config";
-import { haversineM } from "@/lib/geo";
-import { inScope, validateFix } from "@/lib/gps";
+import { fenceFromLink, inFence, OUTSIDE_FENCE_MESSAGE } from "@/lib/fence";
+import { validateFix } from "@/lib/gps";
 import { checkLink } from "@/lib/links";
 import { jsonError, parseJson } from "@/lib/api";
 import { ensureWorkerStarted } from "@/lib/pipeline/worker";
@@ -79,12 +79,17 @@ export async function POST(req: Request) {
   if (kind === "video" && !link.allowVideo) {
     return jsonError("Video capture is not allowed on this link", 403);
   }
+  if (kind === "photo" && !link.allowPhotos) {
+    return jsonError("Photographs are not allowed on this link", 403);
+  }
 
   const settings = await getSettings();
   const gps = body.gps;
   if (!gps || typeof gps.lat !== "number" || typeof gps.lng !== "number") {
     return jsonError("GPS coordinates are required for every capture", 422);
   }
+  // Per-link accuracy floor (falls back to the platform threshold).
+  const minAccuracy = link.minGpsAccuracyM ?? settings.gps_max_accuracy_m;
   const fixCheck = validateFix(
     {
       lat: gps.lat,
@@ -95,7 +100,7 @@ export async function POST(req: Request) {
       heading: gps.heading,
       source: gps.source,
     },
-    settings.gps_max_accuracy_m,
+    minAccuracy,
   );
   if (!fixCheck.ok) {
     return NextResponse.json(
@@ -106,30 +111,16 @@ export async function POST(req: Request) {
   // Hard reject beyond twice the configured threshold — the data would be
   // geographically meaningless. Between threshold and 2x it is accepted
   // but the grade is recorded and confidence is penalized.
-  if (gps.hAccuracy != null && gps.hAccuracy > settings.gps_max_accuracy_m * 2) {
+  if (gps.hAccuracy != null && gps.hAccuracy > minAccuracy * 2) {
     return NextResponse.json(
       { error: fixCheck.grade.message },
       { status: 422 },
     );
   }
-  // Geographic scope enforcement (server-side, never client-trusted).
-  if (
-    link.scope !== "global" &&
-    !inScope(
-      { lat: gps.lat, lng: gps.lng },
-      {
-        scope: link.scope,
-        centerLat: link.centerLat,
-        centerLng: link.centerLng,
-        radiusM: link.radiusM,
-      },
-      haversineM,
-    )
-  ) {
-    return jsonError(
-      "This capture is outside the allowed mapping area for your link.",
-      422,
-    );
+  // Geographic fence enforcement (server-side, never client-trusted).
+  const fence = fenceFromLink(link);
+  if (fence && !inFence({ lat: gps.lat, lng: gps.lng }, fence)) {
+    return jsonError(OUTSIDE_FENCE_MESSAGE, 422);
   }
 
   // Decode + size check + file validation (magic bytes for jpeg/png/mp4).

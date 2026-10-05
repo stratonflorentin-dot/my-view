@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pillow>=10.2
+numpy>=1.26
+python-multipart>=0.0.9
+pydantic>=2.6
+
+# Optional — real building detection (heavier install):
+# ultralytics>=8.2

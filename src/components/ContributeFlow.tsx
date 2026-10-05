@@ -28,19 +28,40 @@ const ARCS = [
   "Front-left",
 ] as const;
 
-type Phase = "loading" | "welcome" | "identity" | "locating" | "capture" | "done";
+type Phase = "loading" | "welcome" | "identity" | "locating" | "capture" | "details" | "done";
 
 type LinkInfo = {
   label: string | null;
   scope: "global" | "area" | "location";
+  fenceType: "circle" | "polygon" | "rectangle";
   centerLat: number | null;
   centerLng: number | null;
   radiusM: number;
+  polygon?: unknown;
+  requireGps: boolean;
+  minGpsAccuracyM: number | null;
+  allowPhotos: boolean;
   allowVideo: boolean;
+  allowBuildingScan: boolean;
+  allowAreaScan: boolean;
+  requireApproval: boolean;
   oneTime: boolean;
   maxSubmissions: number | null;
   usedSubmissions: number;
 };
+
+type FormDef = {
+  id: string;
+  name: string;
+  fields: {
+    key: string;
+    label: string;
+    type: string;
+    required?: boolean;
+    options?: string[];
+    placeholder?: string;
+  }[];
+} | null;
 
 type SessionInfo = {
   sessionId: string;
@@ -165,6 +186,7 @@ function drawCompass(heading: number | null, covered: Set<number>, target: numbe
 export default function ContributeFlow({ token }: { token: string }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [link, setLink] = useState<LinkInfo | null>(null);
+  const [formDef, setFormDef] = useState<FormDef>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [resumeSessionId, setResumeSessionId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -177,6 +199,14 @@ export default function ContributeFlow({ token }: { token: string }) {
   const [guidance, setGuidance] = useState<string>("Aim at the building and capture.");
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
+  // Details/submission step state.
+  const [objName, setObjName] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [address, setAddress] = useState("");
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -209,6 +239,7 @@ export default function ContributeFlow({ token }: { token: string }) {
           return;
         }
         setLink(j.link);
+        setFormDef(j.form ?? null);
         setResumeSessionId(j.lastSessionId ?? null);
         setPhase("welcome");
       } catch {
@@ -709,6 +740,44 @@ export default function ContributeFlow({ token }: { token: string }) {
     (i) => i.status === "uploaded" || i.status === "uploading",
   ).length;
 
+  /* ------------------------------ submission ------------------------------ */
+  const submitDetails = async () => {
+    if (!session) return;
+    setSubmitting(true);
+    try {
+      const formData: Record<string, string> = { ...customValues };
+      const r = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: session.sessionId,
+          kind: link?.allowAreaScan && queue.length > 8 ? "area" : "building",
+          name: objName.trim() || undefined,
+          category: category.trim() || undefined,
+          description: description.trim() || undefined,
+          address: address.trim() || undefined,
+          formData,
+          lat: gpsRef.current?.lat,
+          lng: gpsRef.current?.lng,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        const fields = j.fieldErrors
+          ? Object.values(j.fieldErrors as Record<string, string>).join(", ")
+          : "";
+        say(`Submission failed: ${j.error ?? "error"}${fields ? ` — ${fields}` : ""}`);
+        return;
+      }
+      setSubmissionStatus(j.submission?.status ?? "pending");
+      setPhase("done");
+    } catch {
+      say("Could not submit — check your connection. Your captures are safe.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   /* ------------------------------ render ------------------------------ */
   if (phase === "loading") {
     return (
@@ -970,10 +1039,137 @@ export default function ContributeFlow({ token }: { token: string }) {
               className="mwm-ghost"
               onClick={() => {
                 if (processing > 0) say("Please wait for uploads to finish first.");
-                else setPhase("done");
+                else if (!queue.length) say("Take at least one photo before finishing.");
+                else setPhase("details");
               }}
             >
               Finish
+            </button>
+          </>
+        )}
+
+        {/* DETAILS (location form + custom form) */}
+        {phase === "details" && session && (
+          <>
+            <h1 className="font-display text-xl font-semibold">
+              Tell us about this place
+            </h1>
+            <p className="text-[12.5px] text-[var(--muted)]">
+              {queue.filter((i) => i.status !== "rejected").length} photos attached ·
+              position ±{Math.round(gps?.hAccuracy ?? 0)} m
+            </p>
+
+            <label className="text-[12px] text-[var(--muted)]">Name / title</label>
+            <input
+              className="mwm-input"
+              value={objName}
+              onChange={(e) => setObjName(e.target.value)}
+              placeholder="e.g. Kariakoo Shop No. 4"
+              maxLength={200}
+            />
+
+            <label className="text-[12px] text-[var(--muted)]">Category</label>
+            <select
+              className="mwm-input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">Select a category…</option>
+              {[
+                "building", "house", "shop", "school", "church", "warehouse",
+                "landmark", "business", "construction", "property", "infrastructure", "other",
+              ].map((c) => (
+                <option key={c} value={c}>
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            <label className="text-[12px] text-[var(--muted)]">Address (optional)</label>
+            <input
+              className="mwm-input"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Street / area / district"
+              maxLength={500}
+            />
+
+            <label className="text-[12px] text-[var(--muted)]">Description (optional)</label>
+            <textarea
+              className="mwm-input"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Anything useful for the map owner…"
+              maxLength={4000}
+            />
+
+            {formDef?.fields?.length ? (
+              <>
+                <p className="mt-2 font-display text-[13px] font-semibold">
+                  {formDef.name}
+                </p>
+                {formDef.fields.map((f) => (
+                  <div key={f.key}>
+                    <label className="text-[12px] text-[var(--muted)]">
+                      {f.label}
+                      {f.required && " *"}
+                    </label>
+                    {f.type === "select" ? (
+                      <select
+                        className="mwm-input"
+                        value={customValues[f.key] ?? ""}
+                        onChange={(e) =>
+                          setCustomValues((v) => ({ ...v, [f.key]: e.target.value }))
+                        }
+                      >
+                        <option value="">Choose…</option>
+                        {(f.options ?? []).map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    ) : f.type === "textarea" ? (
+                      <textarea
+                        className="mwm-input"
+                        rows={2}
+                        value={customValues[f.key] ?? ""}
+                        placeholder={f.placeholder}
+                        onChange={(e) =>
+                          setCustomValues((v) => ({ ...v, [f.key]: e.target.value }))
+                        }
+                      />
+                    ) : (
+                      <input
+                        className="mwm-input"
+                        type={f.type === "number" ? "number" : "text"}
+                        value={customValues[f.key] ?? ""}
+                        placeholder={f.placeholder}
+                        onChange={(e) =>
+                          setCustomValues((v) => ({ ...v, [f.key]: e.target.value }))
+                        }
+                      />
+                    )}
+                  </div>
+                ))}
+              </>
+            ) : null}
+
+            <button
+              type="button"
+              className="mwm-primary mt-2"
+              disabled={submitting}
+              onClick={() => void submitDetails()}
+            >
+              {submitting ? "Submitting…" : "Submit contribution"}
+            </button>
+            <button
+              type="button"
+              className="mwm-ghost"
+              onClick={() => setPhase("capture")}
+            >
+              Back to camera
             </button>
           </>
         )}
@@ -987,13 +1183,26 @@ export default function ContributeFlow({ token }: { token: string }) {
               </svg>
             </div>
             <h1 className="mt-4 text-center font-display text-2xl font-semibold">
-              Your map is growing
+              Contribution received
             </h1>
             <p className="mt-2 text-center text-[13.5px] text-[var(--muted)]">
               {done} of {queue.length} captures fully processed.{" "}
               {queue.length - done > 0 &&
                 "The rest will finish processing shortly — you can close this page safely."}
             </p>
+            <div className="mwm-panel mt-4 p-3 text-center text-[12.5px]">
+              {submissionStatus === "approved" ? (
+                <p className="text-[var(--ok)]">
+                  This scan is published to the map automatically. Thank you!
+                </p>
+              ) : (
+                <p>
+                  Your submission is now{" "}
+                  <span className="font-semibold">awaiting review</span> by the map
+                  owner. You can close this page — everything is saved.
+                </p>
+              )}
+            </div>
             <div className="mt-6 flex gap-2">
               <Link href="/" className="mwm-ghost flex-1">
                 Back to site

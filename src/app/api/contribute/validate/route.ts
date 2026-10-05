@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { captureSessions, contributorLinks } from "@/db/schema";
+import { captureSessions, contributorLinks, forms } from "@/db/schema";
 import { checkLink } from "@/lib/links";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
- * Public, unauthenticated check of a mapping link. This is what the
+ * Public, unauthenticated check of a scan/mapping link. This is what the
  * contributor page calls first — server-side validation, never trusting
- * the client.
+ * the client. Returns the link's capture permissions and its custom form
+ * definition (if any).
  */
 export async function GET(req: Request) {
   const limited = rateLimit(req, "api");
@@ -36,20 +37,36 @@ export async function GET(req: Request) {
     .orderBy(desc(captureSessions.startedAt))
     .limit(1);
   const last = sessions[0] ?? null;
+
+  let form = null;
+  if (link.formId) {
+    const f = await db.select().from(forms).where(eq(forms.id, link.formId)).limit(1);
+    form = f[0] ? { id: f[0].id, name: f[0].name, fields: f[0].fields } : null;
+  }
+
   return NextResponse.json({
     ok: true,
     link: {
       label: link.label,
       scope: link.scope,
+      fenceType: link.fenceType,
       centerLat: link.centerLat,
       centerLng: link.centerLng,
       radiusM: link.radiusM,
+      polygon: link.polygon,
+      requireGps: link.requireGps,
+      minGpsAccuracyM: link.minGpsAccuracyM,
+      allowPhotos: link.allowPhotos,
       allowVideo: link.allowVideo,
+      allowBuildingScan: link.allowBuildingScan,
+      allowAreaScan: link.allowAreaScan,
+      requireApproval: link.requireApproval,
       oneTime: link.oneTime,
       maxSubmissions: link.maxSubmissions,
       usedSubmissions: link.usedSubmissions,
       expiresAt: link.expiresAt,
     },
+    form,
     lastSessionId: last ? last.id : null,
   });
 }

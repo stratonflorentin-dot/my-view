@@ -16,8 +16,10 @@ const LIMITS: Record<string, { limit: number; windowMs: number }> = {
 export function rateLimit(
   req: Request,
   kind: keyof typeof LIMITS,
+  limitOverride?: number,
 ): NextResponse | null {
-  const spec = LIMITS[kind];
+  const spec = { ...LIMITS[kind] };
+  if (limitOverride != null && limitOverride > 0) spec.limit = limitOverride;
   const key = `${kind}:${req.headers.get("x-forwarded-for") ?? "local"}`;
   const now = Date.now();
   const hits = (buckets.get(key) ?? []).filter((t) => now - t < spec.windowMs);

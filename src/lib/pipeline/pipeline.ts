@@ -4,6 +4,7 @@ import { db } from "@/db";
 import {
   buildings,
   buildingVersions,
+  captureSessions,
   captures,
   contributorLinks,
   gpsFixes,
@@ -26,6 +27,7 @@ import {
 } from "../image";
 import { validateFix } from "../gps";
 import { storage } from "../storage";
+import { dispatchEvent } from "../webhooks";
 import {
   EngineNotConfigured,
   selectDetectionEngine,
@@ -90,6 +92,14 @@ export async function handleCaptureProcess(job: JobRow): Promise<void> {
   if (!buf) throw new Error("Stored file missing");
 
   const settings = await getSettings();
+
+  // Session → project propagation for grouping.
+  const sessionRows = await db
+    .select({ projectId: captureSessions.projectId })
+    .from(captureSessions)
+    .where(eq(captureSessions.id, cap.sessionId))
+    .limit(1);
+  const projectId = sessionRows[0]?.projectId ?? null;
 
   if (cap.kind === "video") {
     await db
@@ -186,8 +196,8 @@ export async function handleCaptureProcess(job: JobRow): Promise<void> {
 
   if (duplicateOf) return;
 
-  // 4) grouping → building assignment
-  await groupCapture(cap.id);
+  // 4) grouping → building assignment (project-scoped)
+  await groupCapture(cap.id, projectId);
 
   // 5) enqueue reconstruction for the affected building
   const updated = await db
@@ -203,9 +213,13 @@ export async function handleCaptureProcess(job: JobRow): Promise<void> {
 
 /**
  * Assigns a capture to a building: nearest existing building center within
- * GROUP_RADIUS_M, otherwise creates a new building anchored at the capture.
+ * GROUP_RADIUS_M (same project only), otherwise creates a new building
+ * anchored at the capture.
  */
-export async function groupCapture(captureId: string): Promise<void> {
+export async function groupCapture(
+  captureId: string,
+  projectId: string | null = null,
+): Promise<void> {
   const rows = await db
     .select()
     .from(captures)
@@ -215,9 +229,24 @@ export async function groupCapture(captureId: string): Promise<void> {
   if (!cap || cap.gpsLat == null || cap.gpsLng == null) return;
   if (cap.buildingId) return;
 
+  // Resolve the session's project when not supplied explicitly.
+  let pid = projectId;
+  if (pid == null) {
+    const sRows = await db
+      .select({ projectId: captureSessions.projectId })
+      .from(captureSessions)
+      .where(eq(captureSessions.id, cap.sessionId))
+      .limit(1);
+    pid = sRows[0]?.projectId ?? null;
+  }
+
+  const scopeFilter = pid
+    ? eq(buildings.projectId, pid)
+    : isNull(buildings.projectId);
   const all = await db
     .select({ id: buildings.id, centerLat: buildings.centerLat, centerLng: buildings.centerLng })
-    .from(buildings);
+    .from(buildings)
+    .where(scopeFilter);
   const idx = nearestCenter(
     { lat: cap.gpsLat, lng: cap.gpsLng },
     all.map((b) => ({ lat: b.centerLat, lng: b.centerLng })),
@@ -231,6 +260,7 @@ export async function groupCapture(captureId: string): Promise<void> {
       .insert(buildings)
       .values({
         name: `Building ${cap.id.slice(0, 8).toUpperCase()}`,
+        projectId: pid,
         centerLat: cap.gpsLat,
         centerLng: cap.gpsLng,
         altitude: cap.gpsAltitude,
@@ -238,6 +268,11 @@ export async function groupCapture(captureId: string): Promise<void> {
       })
       .returning();
     buildingId = created[0].id;
+    await dispatchEvent(pid, "building.detected", {
+      buildingId,
+      lat: cap.gpsLat,
+      lng: cap.gpsLng,
+    });
   }
   await db
     .update(captures)
@@ -372,6 +407,18 @@ export async function handleReconstruct(job: JobRow): Promise<void> {
 
   await enqueueJob("building.publish", { buildingId, version: nextVersion }, 4);
   void inserted;
+
+  await dispatchEvent(b.projectId, "building.reconstructed", {
+    buildingId,
+    version: nextVersion,
+    type: out.type,
+    confidence: out.confidence,
+  });
+  await dispatchEvent(b.projectId, "model.updated", {
+    buildingId,
+    version: nextVersion,
+    modelUrl: out.modelUrl ?? null,
+  });
 }
 
 /* ------------------------------ publish ------------------------------ */
