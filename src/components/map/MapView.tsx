@@ -91,7 +91,7 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
   const [mode, setMode] = useState<MapMode>("3d");
   const [basemap, setBasemap] = useState<"satellite" | "dark">("satellite");
   const [terrain, setTerrain] = useState(false);
-  const [layers, setLayers] = useState({ buildings: true, captures: true, coverage: true });
+  const [layers, setLayers] = useState({ buildings: true, captures: false, coverage: true });
   const [searchOpen, setSearchOpen] = useState(false);
   /** Set once the MapLibre style has fully loaded — every style-mutating
    *  effect must wait for this, or MapLibre throws "Style is not done
