@@ -101,12 +101,14 @@ export default function ProjectWorkspace({
   me,
   projectId,
   access,
+  initialTab,
 }: {
   me: Me;
   projectId: string;
   access: string;
+  initialTab?: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "overview");
   const canManage = access === "owner" || access === "editor";
 
   const logout = async () => {

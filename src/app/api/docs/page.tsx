@@ -46,6 +46,39 @@ export default function ApiDocsPage() {
           </a>
           .
         </p>
+
+        <div className="mwm-panel mt-5 p-4">
+          <p className="mwm-eyebrow">Get an API key</p>
+          <p className="mt-2 text-[13px] text-[var(--fg)]">
+            The public v1 Map API (
+            <code className="text-[11.5px]">/api/v1/…</code>) uses bearer keys
+            like <code className="text-[11.5px]">mk_secret_…</code>.
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-[12.5px] leading-relaxed text-[var(--muted)]">
+            <li>
+              Open{" "}
+              <Link className="text-[var(--accent)] hover:underline" href="/dashboard">
+                your dashboard
+              </Link>{" "}
+              and click one of your map projects.
+            </li>
+            <li>
+              Go to the <span className="text-[var(--fg)]">Developers</span> tab.
+            </li>
+            <li>
+              Click <span className="text-[var(--fg)]">+ Create key</span>, pick
+              a name and scopes, then copy the secret — it is shown only once.
+            </li>
+            <li>
+              Call the API:
+              <code className="mt-1 block rounded-[var(--r-1)] border border-[var(--line)] bg-[var(--input)] px-2 py-1.5 font-mono text-[11px] text-[var(--fg)]">
+                curl &quot;https://my-view-azure.vercel.app/api/v1/maps&quot; -H
+                &quot;Authorization: Bearer mk_secret_…&quot;
+              </code>
+            </li>
+          </ol>
+        </div>
+
         <div className="mwm-panel mt-6 overflow-hidden">
           <table className="w-full text-left text-[12.5px]">
             <tbody>

@@ -188,9 +188,8 @@ export default function ProjectsDashboard({ me }: { me: Me }) {
             </div>
           )}
           {projects?.map((p) => (
-            <Link
+            <div
               key={p.id}
-              href={`/dashboard/projects/${p.id}`}
               className="mwm-panel block p-3.5 transition-colors hover:border-[var(--line-2)]"
             >
               <div className="flex items-start gap-2.5">
@@ -209,7 +208,12 @@ export default function ProjectsDashboard({ me }: { me: Me }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h2 className="truncate font-display text-[13.5px] font-semibold tracking-[-0.01em]">
-                      {p.name}
+                      <Link
+                        href={`/dashboard/projects/${p.id}`}
+                        className="hover:text-[var(--accent)]"
+                      >
+                        {p.name}
+                      </Link>
                     </h2>
                     <span className="mwm-badge badge-muted ml-auto flex-none">
                       {p.visibility.replace(/_/g, " ")}
@@ -226,8 +230,14 @@ export default function ProjectsDashboard({ me }: { me: Me }) {
                 <span className="font-mono uppercase tracking-[0.08em]">{p.access}</span>
                 <span className="h-3 w-px bg-[var(--line)]" />
                 <span className="font-mono">{new Date(p.createdAt).toLocaleDateString()}</span>
+                <Link
+                  href={`/dashboard/projects/${p.id}?tab=developers`}
+                  className="ml-auto font-medium text-[var(--accent)] hover:underline"
+                >
+                  API keys →
+                </Link>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </main>
