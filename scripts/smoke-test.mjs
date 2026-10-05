@@ -1,4 +1,4 @@
-const B = "http://localhost:3111";
+const B = process.env.BASE_URL || "http://localhost:3111";
 let cookie = "";
 async function req(path, opts = {}) {
   const r = await fetch(B + path, {
