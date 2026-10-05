@@ -32,7 +32,13 @@ Thumbs.db
 # Sensitive files (auto-detected)
 .env.example
 
-.env.local 
+.env.local
 drizzle.config.json
 .vercel
 .env*
+
+# Next.js / local artifacts
+.next/
+tsconfig.tsbuildinfo
+storage/
+
