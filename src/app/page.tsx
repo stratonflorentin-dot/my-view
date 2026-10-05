@@ -32,117 +32,133 @@ export default async function Landing() {
   const reconConfigured = Boolean(process.env.RECON_API_URL);
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
+    <div className="min-h-dvh text-[var(--fg)]">
       {/* Nav */}
-      <header className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-4">
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]/40">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
-              <path d="M12 22V12M3 7l9 5 9-5" />
-            </svg>
-          </span>
-          <span className="font-display text-[15px] font-semibold tracking-wide">
-            {settings.platform_name}
-          </span>
-        </Link>
-        <nav className="ml-auto flex items-center gap-1 text-[13px]">
-          <Link href="/map" className="mwm-btn">Explore Map</Link>
-          <Link href="/api/docs" className="mwm-btn">API</Link>
-          {user ? (
-            <>
-              <Link href={user.role === "admin" ? "/admin" : "/map"} className="mwm-btn">{user.name}</Link>
-              {user.role === "admin" && <Link href="/admin" className="mwm-btn-on mwm-btn">Dashboard</Link>}
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="mwm-btn">Sign in</Link>
-              <Link href="/register" className="mwm-btn mwm-btn-on">Get started</Link>
-            </>
-          )}
-        </nav>
+      <header className="border-b border-[var(--line)] bg-[var(--bg-2)]">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
+                <path d="M12 22V12M3 7l9 5 9-5" />
+              </svg>
+            </span>
+            <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+              {settings.platform_name}
+            </span>
+          </Link>
+          <nav className="ml-auto flex items-center gap-1">
+            <Link href="/map" className="mwm-btn">Explore Map</Link>
+            <Link href="/api/docs" className="mwm-btn">API</Link>
+            <span className="mx-1 hidden h-4 w-px bg-[var(--line)] sm:block" />
+            {user ? (
+              <>
+                <Link href={user.role === "admin" ? "/admin" : "/map"} className="mwm-btn">
+                  {user.name}
+                </Link>
+                {user.role === "admin" && (
+                  <Link href="/admin" className="mwm-btn mwm-btn-on">Admin</Link>
+                )}
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="mwm-btn">Sign in</Link>
+                <Link href="/register" className="mwm-btn mwm-btn-on">Get started</Link>
+              </>
+            )}
+          </nav>
+        </div>
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl gap-8 px-5 pb-10 pt-6 lg:grid-cols-[1.05fr_1fr]">
+      <section className="mx-auto grid max-w-6xl gap-8 px-5 pb-12 pt-10 lg:grid-cols-[1.05fr_1fr]">
         <div>
-          <p className="mwm-badge badge-muted mb-4">
+          <p className="mwm-eyebrow">
             Private 3D mapping platform
-            {!reconConfigured && (
-              <span className="ml-1 text-[var(--muted)]">· estimation engines active · photogrammetry pluggable</span>
-            )}
+            {!reconConfigured && <span className="text-[var(--muted-2)]"> · estimation engines active · photogrammetry pluggable</span>}
           </p>
-          <h1 className="font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
+          <h1 className="mt-3 font-display text-[30px] font-semibold leading-[1.14] tracking-[-0.02em] sm:text-[38px]">
             Build your own
-            <span className="text-[var(--accent)]"> living 3D map</span>
+            <br />
+            <span className="text-[var(--accent)]">3D map of any place</span>
           </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-[var(--muted)]">
+          <p className="mt-4 max-w-xl text-[13.5px] leading-relaxed text-[var(--muted)]">
             Invite people around a location. They photograph it with their
             phone — GPS, quality and overlap checked at every step. The
             pipeline reconstructs the geography and your map grows, one
             verified building at a time.
           </p>
-          <div className="mt-6 flex flex-wrap gap-2.5">
+          <div className="mt-6 flex flex-wrap gap-2">
             <Link
               href={user?.role === "admin" ? "/admin" : "/login"}
               className="mwm-primary"
             >
-              Create Mapping Link
+              Create mapping link
             </Link>
             <Link href="/map" className="mwm-ghost">
-              Explore Map
+              Explore map
             </Link>
             <Link href="/login" className="mwm-ghost">
               Contribute
             </Link>
           </div>
-          <div className="mt-8 grid max-w-lg grid-cols-3 gap-3 text-center">
+          <div className="mt-8 grid max-w-lg grid-cols-3 gap-2.5">
             {[
-              ["8-arc", "guided capture"],
-              ["±3 m", "GPS graded, never faked"],
-              ["0 → 3D", "estimate → photogrammetry"],
+              ["8-arc", "Guided capture"],
+              ["±3 m", "GPS graded"],
+              ["0 → 3D", "Estimate → mesh"],
             ].map(([a, b]) => (
-              <div key={a} className="mwm-panel px-2 py-3">
-                <p className="font-display text-lg font-semibold text-[var(--accent)] tabular">{a}</p>
-                <p className="mt-0.5 text-[11px] text-[var(--muted)]">{b}</p>
+              <div key={a} className="mwm-panel px-3 py-2.5">
+                <p className="mwm-metric text-[15px] text-[var(--fg)]">{a}</p>
+                <p className="mt-0.5 text-[10.5px] uppercase tracking-[0.08em] text-[var(--muted-2)]">
+                  {b}
+                </p>
               </div>
             ))}
           </div>
         </div>
         <div className="mwm-panel relative h-[380px] overflow-hidden p-1.5 lg:h-[440px]">
           <MapLoader preview />
-          <p className="absolute bottom-3 left-3 z-10 rounded-md bg-[var(--panel)] px-2 py-1 text-[10.5px] text-[var(--muted)] ring-1 ring-[var(--line)]">
-            Live platform map — satellite · 3D buildings · coverage
+          <p className="absolute bottom-3 left-3 z-10 rounded-[var(--r-1)] border border-[var(--line)] bg-[var(--panel)]/95 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.07em] text-[var(--muted)] backdrop-blur">
+            Live map · satellite · 3D buildings · coverage
           </p>
         </div>
       </section>
 
       {/* How it works */}
       <section className="mx-auto max-w-6xl px-5 pb-16">
-        <h2 className="font-display text-xl font-semibold">How it works</h2>
+        <p className="mwm-eyebrow">Workflow</p>
+        <h2 className="mt-1 font-display text-[17px] font-semibold tracking-[-0.01em]">
+          How it works
+        </h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s) => (
             <div key={s.n} className="mwm-panel p-4">
-              <p className="font-display text-xs font-semibold text-[var(--accent)] tabular">{s.n}</p>
-              <h3 className="mt-2 font-display text-[14.5px] font-semibold">{s.title}</h3>
+              <p className="mwm-metric text-[11px] text-[var(--muted-2)]">{s.n}</p>
+              <h3 className="mt-2 font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+                {s.title}
+              </h3>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--muted)]">{s.body}</p>
             </div>
           ))}
         </div>
-        <p className="mt-6 max-w-3xl text-[12.5px] leading-relaxed text-[var(--muted)]">
-          Honest by design: a single photograph produces an{" "}
-          <span className="text-[var(--warn)]">estimated</span> representation
-          with a documented confidence score — never a fake scan. Multi-view
-          captures upgrade it, and the reconstruction layer is an engine
-          registry (<code className="text-[var(--fg)]">ReconstructionEngine</code>,{" "}
-          <code className="text-[var(--fg)]">BuildingDetectionEngine</code>) so
-          real photogrammetry, neural or gaussian-splatting services can be
-          attached later without changing the product.
-        </p>
+        <div className="mwm-panel mt-3 p-4">
+          <p className="mwm-eyebrow">Data integrity</p>
+          <p className="mt-2 max-w-3xl text-[12.5px] leading-relaxed text-[var(--muted)]">
+            A single photograph produces an{" "}
+            <span className="text-[var(--warn)]">estimated</span> representation
+            with a documented confidence score — never a fake scan. Multi-view
+            captures upgrade it, and the reconstruction layer is an engine
+            registry (<code className="text-[var(--fg)]">ReconstructionEngine</code>,{" "}
+            <code className="text-[var(--fg)]">BuildingDetectionEngine</code>) so
+            real photogrammetry, neural or gaussian-splatting services can be
+            attached later without changing the product.
+          </p>
+        </div>
       </section>
 
-      <footer className="border-t border-[var(--line)]">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-5 text-[11.5px] text-[var(--muted)]">
+      <footer className="border-t border-[var(--line)] bg-[var(--bg-2)]">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-4 text-[11.5px] text-[var(--muted-2)]">
           <span>{settings.platform_name} — private mapping platform</span>
           <span className="ml-auto flex gap-4">
             <Link href="/api/openapi.json" className="hover:text-[var(--fg)]">OpenAPI</Link>

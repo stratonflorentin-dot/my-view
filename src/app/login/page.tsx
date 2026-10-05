@@ -34,60 +34,97 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)] p-5">
-      <div className="mwm-panel w-full max-w-sm p-5">
-        <Link href="/" className="font-display text-[15px] font-semibold">
-          <span className="text-[var(--accent)]">▰</span> MyWorld 3D Map
+    <div className="flex min-h-dvh items-center justify-center p-5">
+      <div className="mwm-auth mwm-panel p-6">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
+            <BrandMark />
+          </span>
+          <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+            MyWorld 3D Map
+          </span>
         </Link>
-        <h1 className="mt-4 font-display text-xl font-semibold">Sign in</h1>
+
+        <p className="mwm-eyebrow mt-6">Authentication</p>
+        <h1 className="mt-1 font-display text-[17px] font-semibold tracking-[-0.01em]">
+          Sign in
+        </h1>
         <p className="mt-1 text-[12.5px] text-[var(--muted)]">
           Access the map, dashboard and API.
         </p>
-        <form onSubmit={submit} className="mt-4 space-y-3">
-          <input
-            className="mwm-input"
-            type="email"
-            required
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            className="mwm-input"
-            type="password"
-            required
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {error && <p className="text-[12px] text-[var(--bad)]">{error}</p>}
+
+        <form onSubmit={submit} className="mt-5 space-y-2.5">
+          <label className="block">
+            <span className="mwm-eyebrow">Email</span>
+            <input
+              className="mwm-input mt-1"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mwm-eyebrow">Password</span>
+            <input
+              className="mwm-input mt-1"
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          {error && <p className="mwm-alert">{error}</p>}
           <button className="mwm-primary w-full" type="submit" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="h-px flex-1 bg-[var(--border)]" />
-          <span className="text-[11px] text-[var(--muted)]">or</span>
-          <span className="h-px flex-1 bg-[var(--border)]" />
+
+        <div className="my-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-[var(--line)]" />
+          <span className="mwm-eyebrow">or</span>
+          <span className="h-px flex-1 bg-[var(--line)]" />
         </div>
+
         <a
-          className="mwm-input mt-3 flex w-full items-center justify-center gap-2 !bg-white text-[13px] font-medium text-[#1f1f1f]"
+          className="mwm-oauth"
           href={`/api/auth/google?next=${encodeURIComponent(next)}`}
         >
           <GoogleG />
           Continue with Google
         </a>
-        <p className="mt-4 rounded-md bg-[var(--hover)] px-2 py-1.5 text-center text-[11px] text-[var(--muted)]">
-          Demo admin: <span className="tabular">admin@myworld.local / admin1234</span>
-        </p>
-        <p className="mt-3 text-center text-[12px] text-[var(--muted)]">
+
+        <p className="mt-4 text-center text-[12.5px] text-[var(--muted)]">
           No account?{" "}
-          <Link href="/register" className="text-[var(--accent)]">
+          <Link
+            href="/register"
+            className="font-medium text-[var(--accent)] hover:underline"
+          >
             Register a viewer
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+function BrandMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5 text-[var(--accent)]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      aria-hidden="true"
+    >
+      <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
+      <path d="M12 22V12M3 7l9 5 9-5" />
+    </svg>
   );
 }
 

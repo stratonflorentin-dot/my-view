@@ -72,22 +72,52 @@ export default function ProjectsDashboard({ me }: { me: Me }) {
   };
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
-      <header className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] bg-[var(--bg-2)] px-4 py-2.5">
-        <Link href="/" className="font-display text-[14px] font-semibold">
-          <span className="text-[var(--accent)]">▰</span> My Maps
+    <div className="min-h-dvh text-[var(--fg)]">
+      <header className="mwm-bar">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5 text-[var(--accent)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+            >
+              <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
+              <path d="M12 22V12M3 7l9 5 9-5" />
+            </svg>
+          </span>
+          <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+            My Maps
+          </span>
         </Link>
-        <span className="text-[11.5px] text-[var(--muted)]">{me.email}</span>
-        <div className="ml-auto flex items-center gap-1 text-[12px]">
+
+        <span className="hidden h-4 w-px bg-[var(--line-2)] sm:block" />
+
+        <span className="truncate text-[12.5px] text-[var(--muted)]">{me.email}</span>
+        {me.role === "admin" && <span className="mwm-badge badge-muted">admin</span>}
+
+        <div className="ml-auto flex items-center gap-1">
           <Link href="/map" className="mwm-btn">Open Map</Link>
-          {me.role === "admin" && <Link href="/admin" className="mwm-btn">Admin</Link>}
+          {me.role === "admin" && (
+            <>
+              <span className="h-4 w-px bg-[var(--line)]" />
+              <Link href="/admin" className="mwm-btn">Admin</Link>
+            </>
+          )}
+          <span className="h-4 w-px bg-[var(--line)]" />
           <button type="button" onClick={logout} className="mwm-btn">Sign out</button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-lg font-semibold">Your map projects</h1>
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="mwm-eyebrow">Projects</p>
+            <h1 className="mt-1 font-display text-base font-semibold tracking-[-0.01em]">
+              Your map projects
+            </h1>
+          </div>
           <button type="button" className="mwm-btn mwm-btn-on" onClick={() => setCreating(true)}>
             + New project
           </button>
@@ -143,26 +173,60 @@ export default function ProjectsDashboard({ me }: { me: Me }) {
           </div>
         )}
 
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-          {projects === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {projects === null && (
+            <p className="text-[12.5px] text-[var(--muted-2)]">Loading projects…</p>
+          )}
           {projects?.length === 0 && !creating && (
-            <p className="text-sm text-[var(--muted)]">
-              No projects yet — create your first map project to start scanning. API keys live
-              inside a map project, on its Developers tab.
-            </p>
+            <div className="mwm-panel p-5 sm:col-span-2">
+              <p className="mwm-eyebrow">No data</p>
+              <p className="mt-2 text-[13px] text-[var(--fg)]">No projects yet.</p>
+              <p className="mt-1 max-w-md text-[12.5px] leading-relaxed text-[var(--muted)]">
+                Create your first map project to start scanning. API keys live inside a map
+                project, on its Developers tab.
+              </p>
+            </div>
           )}
           {projects?.map((p) => (
-            <Link key={p.id} href={`/dashboard/projects/${p.id}`} className="mwm-panel block p-4 transition hover:border-[var(--accent)]">
-              <div className="flex items-center gap-2">
-                <h2 className="font-display text-[14.5px] font-semibold">{p.name}</h2>
-                <span className="mwm-badge badge-muted ml-auto">{p.visibility.replace("_", " ")}</span>
+            <Link
+              key={p.id}
+              href={`/dashboard/projects/${p.id}`}
+              className="mwm-panel block p-3.5 transition-colors hover:border-[var(--line-2)]"
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-[var(--r-1)] border border-[var(--line)] bg-[var(--bg-3)]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-3 w-3 text-[var(--accent)]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
+                    <path d="M12 22V12M3 7l9 5 9-5" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="truncate font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+                      {p.name}
+                    </h2>
+                    <span className="mwm-badge badge-muted ml-auto flex-none">
+                      {p.visibility.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  {p.description && (
+                    <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-[var(--muted)]">
+                      {p.description}
+                    </p>
+                  )}
+                </div>
               </div>
-              {p.description && (
-                <p className="mt-1 line-clamp-2 text-[12.5px] text-[var(--muted)]">{p.description}</p>
-              )}
-              <p className="mt-2 text-[11px] text-[var(--muted)]">
-                Access: {p.access} · created {new Date(p.createdAt).toLocaleDateString()}
-              </p>
+              <div className="mt-3 flex items-center gap-2 border-t border-[var(--line)] pt-2 text-[10.5px] text-[var(--muted-2)]">
+                <span className="font-mono uppercase tracking-[0.08em]">{p.access}</span>
+                <span className="h-3 w-px bg-[var(--line)]" />
+                <span className="font-mono">{new Date(p.createdAt).toLocaleDateString()}</span>
+              </div>
             </Link>
           ))}
         </div>

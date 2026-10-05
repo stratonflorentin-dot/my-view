@@ -1,49 +1,130 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-grotesk), var(--font-manrope), ui-sans-serif,
-    sans-serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+  --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
 }
+
+/*
+  Design language: "survey instrument".
+  Cool graphite surfaces, 1px hairlines, tight radii, minimal elevation, and a
+  single azure signal colour reserved for actions and state — nothing decorative.
+*/
 
 :root,
 [data-theme="dark"] {
-  --bg: #0b0e11;
-  --bg-2: #10141a;
-  --panel: rgba(15, 19, 24, 0.92);
-  --panel-solid: #10141a;
-  --line: #232c36;
-  --fg: #e8ecf1;
-  --muted: #8b97a5;
-  --accent: #f0a63c;
-  --accent-ink: #0b0e11;
-  --accent-soft: rgba(240, 166, 60, 0.13);
-  --ok: #3ecf8e;
-  --warn: #e8c547;
-  --bad: #ef6a5a;
-  --hover: rgba(255, 255, 255, 0.06);
-  --input: #141a21;
+  /* surfaces */
+  --bg: #080b0e;
+  --bg-2: #0c1015;
+  --bg-3: #121820;
+  --panel: #0e1319;
+  --panel-solid: #0e1319;
+
+  /* hairlines */
+  --line: #1b232c;
+  --line-2: #2a3541;
+
+  /* text */
+  --fg: #e3e8ee;
+  --muted: #8593a2;
+  --muted-2: #5d6b7a;
+
+  /* signal */
+  --accent: #2e9fd4;
+  --accent-hi: #47b4e7;
+  --accent-ink: #041520;
+  --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent);
+
+  /* state */
+  --ok: #35c48b;
+  --warn: #d5a03c;
+  --bad: #e2584c;
+
+  /* interaction */
+  --hover: rgba(255, 255, 255, 0.045);
+  --input: #0b1116;
+  --grid: rgba(255, 255, 255, 0.014);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+
+  /* geometry */
+  --r-1: 3px;
+  --r-2: 6px;
+  --r-3: 9px;
+  --e-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --e-2: 0 1px 2px rgba(0, 0, 0, 0.45), 0 18px 40px -24px rgba(0, 0, 0, 0.8);
+
   color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --bg: #f4f6f8;
-  --bg-2: #ffffff;
-  --panel: rgba(255, 255, 255, 0.94);
+  --bg: #eef1f4;
+  --bg-2: #f8fafb;
+  --bg-3: #ffffff;
+  --panel: #ffffff;
   --panel-solid: #ffffff;
-  --line: #d8dee5;
-  --fg: #171d24;
-  --muted: #5c6a7a;
-  --hover: rgba(0, 0, 0, 0.05);
-  --input: #eef1f4;
+
+  --line: #dde3e9;
+  --line-2: #c3ccd6;
+
+  --fg: #10161d;
+  --muted: #59677a;
+  --muted-2: #8391a2;
+
+  --accent: #1b7fae;
+  --accent-hi: #146a93;
+  --accent-ink: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+
+  --ok: #17915f;
+  --warn: #a2740f;
+  --bad: #c2402f;
+
+  --hover: rgba(0, 0, 0, 0.04);
+  --input: #ffffff;
+  --grid: rgba(0, 0, 0, 0.018);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+
+  --e-1: 0 1px 2px rgba(16, 22, 29, 0.06);
+  --e-2: 0 1px 2px rgba(16, 22, 29, 0.06), 0 18px 40px -28px rgba(16, 22, 29, 0.4);
+
   color-scheme: light;
 }
 
 html,
 body {
   height: 100%;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 72px 72px;
   color: var(--fg);
+}
+
+body {
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--fg);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-feature-settings: "zero" 1;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--r-2);
 }
 
 /* ------------------------- shared primitives ------------------------- */
@@ -51,55 +132,83 @@ body {
 .mwm-panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  border-radius: var(--r-3);
+  box-shadow: var(--e-1);
+}
+
+/* Panel with a hairline header row. */
+.mwm-panel-h {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.mwm-panel-b {
+  padding: 0.9rem;
+}
+
+/* Mono micro-label used for section eyebrows and field labels. */
+.mwm-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* Dense numeric readout. */
+.mwm-metric {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 .mwm-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.6rem;
-  font-size: 11.5px;
-  font-weight: 600;
+  padding: 0.34rem 0.6rem;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
-  border-radius: 0.5rem;
-  transition: color 120ms ease, background 120ms ease;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  transition: color 110ms ease, background 110ms ease, border-color 110ms ease;
   cursor: pointer;
 }
 .mwm-btn:hover {
   color: var(--fg);
   background: var(--hover);
+  border-color: var(--line);
 }
+
 .mwm-btn-on {
   background: var(--accent);
+  border-color: var(--accent);
   color: var(--accent-ink);
+  font-weight: 600;
 }
 .mwm-btn-on:hover {
-  background: var(--accent);
+  background: var(--accent-hi);
+  border-color: var(--accent-hi);
   color: var(--accent-ink);
 }
 
-.mwm-input {
-  width: 100%;
-  border-radius: 0.55rem;
-  border: 1px solid var(--line);
-  background: var(--input);
-  padding: 0.5rem 0.65rem;
-  font-size: 13px;
-  color: var(--fg);
-  outline: none;
-  transition: border-color 120ms ease;
+/* Active state for toggles/filters — tinted, not a primary CTA. */
+.mwm-btn-sel {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  color: var(--accent);
+  font-weight: 600;
 }
-.mwm-input::placeholder {
-  color: var(--muted);
-}
-.mwm-input:focus {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-}
-select.mwm-input {
-  appearance: none;
+.mwm-btn-sel:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  color: var(--accent-hi);
 }
 
 .mwm-primary {
@@ -109,62 +218,103 @@ select.mwm-input {
   gap: 0.4rem;
   background: var(--accent);
   color: var(--accent-ink);
-  font-weight: 700;
-  font-size: 13px;
-  border-radius: 0.6rem;
-  padding: 0.55rem 1rem;
-  transition: opacity 120ms ease;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.005em;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-2);
+  padding: 0.48rem 0.9rem;
+  transition: background 110ms ease;
   cursor: pointer;
 }
 .mwm-primary:hover {
-  opacity: 0.9;
+  background: var(--accent-hi);
+  border-color: var(--accent-hi);
 }
 .mwm-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
+
 .mwm-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  border: 1px solid var(--line);
+  background: transparent;
+  border: 1px solid var(--line-2);
   color: var(--fg);
-  font-weight: 600;
-  font-size: 13px;
-  border-radius: 0.6rem;
-  padding: 0.55rem 1rem;
-  transition: background 120ms ease;
+  font-weight: 500;
+  font-size: 12.5px;
+  border-radius: var(--r-2);
+  padding: 0.48rem 0.9rem;
+  transition: background 110ms ease, border-color 110ms ease;
   cursor: pointer;
 }
 .mwm-ghost:hover {
   background: var(--hover);
+  border-color: var(--muted-2);
+}
+
+.mwm-input {
+  width: 100%;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
+  background: var(--input);
+  padding: 0.46rem 0.6rem;
+  font-size: 12.5px;
+  color: var(--fg);
+  outline: none;
+  transition: border-color 110ms ease, box-shadow 110ms ease;
+}
+.mwm-input::placeholder {
+  color: var(--muted-2);
+}
+.mwm-input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.mwm-input:focus-visible {
+  box-shadow: var(--ring);
+}
+select.mwm-input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) calc(50% + 1px),
+    calc(100% - 10px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.8rem;
 }
 
 .mwm-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  border-radius: 999px;
-  padding: 0.15rem 0.55rem;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  gap: 0.28rem;
+  border-radius: var(--r-1);
+  padding: 0.1rem 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .badge-ok {
   color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
+  background: color-mix(in srgb, var(--ok) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 26%, transparent);
 }
 .badge-warn {
   color: var(--warn);
-  background: color-mix(in srgb, var(--warn) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+  background: color-mix(in srgb, var(--warn) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 26%, transparent);
 }
 .badge-bad {
   color: var(--bad);
-  background: color-mix(in srgb, var(--bad) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent);
+  background: color-mix(in srgb, var(--bad) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bad) 26%, transparent);
 }
 .badge-muted {
   color: var(--muted);
@@ -172,36 +322,136 @@ select.mwm-input {
   border: 1px solid var(--line);
 }
 
+/* Tab strip: flat labels, azure rule marks the active tab. */
+.mwm-tabs {
+  display: flex;
+  gap: 0.15rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  padding: 0 0.75rem;
+  scrollbar-width: none;
+}
+.mwm-tabs::-webkit-scrollbar {
+  display: none;
+}
+.mwm-tab {
+  position: relative;
+  flex: none;
+  border: none;
+  background: transparent;
+  padding: 0.62rem 0.7rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 110ms ease;
+}
+.mwm-tab:hover {
+  color: var(--fg);
+}
+.mwm-tab::after {
+  content: "";
+  position: absolute;
+  inset: auto 0.55rem -1px 0.55rem;
+  height: 2px;
+  background: transparent;
+  transition: background 110ms ease;
+}
+.mwm-tab[data-active="true"] {
+  color: var(--fg);
+  font-weight: 600;
+}
+.mwm-tab[data-active="true"]::after {
+  background: var(--accent);
+}
+
+/* App chrome bar. */
+.mwm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  padding: 0.6rem 1rem;
+}
+
+.mwm-divider {
+  height: 1px;
+  background: var(--line);
+}
+
+.mwm-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: var(--r-2);
+  border: 1px solid color-mix(in srgb, var(--bad) 32%, transparent);
+  background: color-mix(in srgb, var(--bad) 9%, transparent);
+  color: var(--bad);
+  padding: 0.5rem 0.6rem;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.mwm-oauth {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid #d5dae0;
+  border-radius: var(--r-2);
+  padding: 0.5rem 0.9rem;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background 110ms ease;
+  cursor: pointer;
+}
+.mwm-oauth:hover {
+  background: #f3f5f7;
+}
+
+/* Auth screen shell. */
+.mwm-auth {
+  width: 100%;
+  max-width: 22rem;
+}
+
 /* -------------------------- maplibre chrome -------------------------- */
 
-.mwm-root .maplibregl-ctrl-group {
+.maplibregl-ctrl-group {
   background: var(--panel) !important;
   border: 1px solid var(--line);
-  border-radius: 0.6rem;
+  border-radius: var(--r-2);
   overflow: hidden;
-  backdrop-filter: blur(8px);
+  box-shadow: var(--e-1);
 }
-.mwm-root .maplibregl-ctrl-group button {
+.maplibregl-ctrl-group button {
   width: 30px;
   height: 30px;
   background: transparent !important;
 }
-.mwm-root .maplibregl-ctrl-group button + button {
+.maplibregl-ctrl-group button + button {
   border-top: 1px solid var(--line) !important;
 }
-.mwm-root .maplibregl-ctrl button .maplibregl-ctrl-icon {
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
   filter: invert(0.8) sepia(0.2);
 }
-[data-theme="light"] .mwm-root .maplibregl-ctrl button .maplibregl-ctrl-icon {
+[data-theme="light"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
   filter: none;
 }
-.mwm-root .maplibregl-ctrl-attrib {
-  background: rgba(11, 14, 17, 0.7) !important;
+.maplibregl-ctrl-attrib {
+  background: rgba(8, 11, 14, 0.72) !important;
   color: var(--muted) !important;
   font-size: 10px;
-  border-radius: 0.4rem;
+  border-radius: var(--r-1);
 }
-.mwm-root .maplibregl-ctrl-attrib a {
+.maplibregl-ctrl-attrib a {
   color: #b9c4d0 !important;
 }
 .mwm-root .maplibregl-canvas {
@@ -212,19 +462,27 @@ select.mwm-input {
 }
 
 /* ------------------------------ scrollbars ----------------------------- */
+
 ::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--line);
+  background: var(--line-2);
+  border: 3px solid transparent;
+  background-clip: content-box;
   border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-2);
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
 /* ------------------------------ misc ---------------------------------- */
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }
@@ -261,4 +519,14 @@ select.mwm-input {
   border-radius: 999px;
   background: var(--ok);
   border: 2px solid var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

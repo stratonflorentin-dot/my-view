@@ -115,24 +115,45 @@ export default function ProjectWorkspace({
   };
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
-      <header className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] bg-[var(--bg-2)] px-4 py-2.5">
-        <Link href="/dashboard" className="font-display text-[14px] font-semibold">
-          <span className="text-[var(--accent)]">◂</span> My Maps
+    <div className="min-h-dvh text-[var(--fg)]">
+      <header className="mwm-bar">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5 text-[var(--accent)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+            >
+              <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
+              <path d="M12 22V12M3 7l9 5 9-5" />
+            </svg>
+          </span>
+          <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+            My Maps
+          </span>
         </Link>
-        <span className="text-[11.5px] text-[var(--muted)]">{me.email} · {access}</span>
-        <div className="ml-auto flex items-center gap-1 text-[12px]">
+
+        <span className="hidden h-4 w-px bg-[var(--line-2)] sm:block" />
+
+        <span className="truncate text-[12.5px] text-[var(--muted)]">{me.email}</span>
+        <span className="mwm-badge badge-muted">{access}</span>
+
+        <div className="ml-auto flex items-center gap-1">
           <Link href={`/map?project=${projectId}`} className="mwm-btn">Open Map</Link>
+          <span className="h-4 w-px bg-[var(--line)]" />
           <button type="button" onClick={logout} className="mwm-btn">Sign out</button>
         </div>
       </header>
 
-      <nav className="flex gap-1 overflow-x-auto border-b border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5">
+      <nav className="mwm-tabs">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
-            className={`mwm-btn shrink-0 ${tab === t.id ? "mwm-btn-on" : ""}`}
+            className="mwm-tab"
+            data-active={tab === t.id}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -140,7 +161,7 @@ export default function ProjectWorkspace({
         ))}
       </nav>
 
-      <main className="mx-auto max-w-6xl p-4">
+      <main className="mx-auto max-w-6xl px-4 py-5">
         {tab === "overview" && <Overview projectId={projectId} />}
         {tab === "links" && <ScanLinks projectId={projectId} canManage={canManage} />}
         {tab === "submissions" && <Submissions projectId={projectId} canManage={canManage} />}
@@ -186,7 +207,7 @@ function Overview({ projectId }: { projectId: string }) {
     if (!r.ok) throw new Error();
     return r.json();
   }, 8000, [projectId]);
-  if (!data) return <p className="text-sm text-[var(--muted)]">Loading…</p>;
+  if (!data) return <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>;
   const { project, stats } = data;
   const cards: [string, number][] = [
     ["Buildings", stats.buildings],
@@ -196,7 +217,7 @@ function Overview({ projectId }: { projectId: string }) {
   ];
   return (
     <div>
-      <h1 className="font-display text-lg font-semibold">{project.name}</h1>
+      <h1 className="font-display text-base font-semibold tracking-[-0.01em]">{project.name}</h1>
       <p className="text-[12px] text-[var(--muted)]">
         Visibility: {project.visibility.replace("_", " ")}
       </p>
@@ -310,7 +331,7 @@ function ScanLinks({ projectId, canManage }: { projectId: string; canManage: boo
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-lg font-semibold">Scan links</h1>
+        <h1 className="font-display text-base font-semibold tracking-[-0.01em]">Scan links</h1>
         {canManage && (
           <button type="button" className="mwm-btn mwm-btn-on" onClick={() => setShowForm(true)}>
             + Create scan link
@@ -420,9 +441,9 @@ function ScanLinks({ projectId, canManage }: { projectId: string; canManage: boo
       )}
 
       <div className="mt-4 space-y-2">
-        {links === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
+        {links === null && <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>}
         {links?.links.length === 0 && (
-          <p className="text-sm text-[var(--muted)]">No scan links yet.</p>
+          <p className="text-[12.5px] text-[var(--muted-2)]">No scan links yet.</p>
         )}
         {links?.links.map((l) => (
           <div key={l.id} className="mwm-panel flex flex-wrap items-center gap-3 p-3">
@@ -488,7 +509,7 @@ function Submissions({ projectId, canManage }: { projectId: string; canManage: b
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display text-lg font-semibold">Submissions</h1>
+        <h1 className="font-display text-base font-semibold tracking-[-0.01em]">Submissions</h1>
         <div className="ml-auto flex gap-1">
           {["pending", "approved", "rejected", "needs_imagery"].map((s) => (
             <button
@@ -504,9 +525,9 @@ function Submissions({ projectId, canManage }: { projectId: string; canManage: b
       </div>
 
       <div className="mt-4 space-y-2">
-        {data === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
+        {data === null && <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>}
         {data?.submissions.length === 0 && (
-          <p className="text-sm text-[var(--muted)]">No {status.replace("_", " ")} submissions.</p>
+          <p className="text-[12.5px] text-[var(--muted-2)]">No {status.replace("_", " ")} submissions.</p>
         )}
         {data?.submissions.map((s) => (
           <div key={s.id} className="mwm-panel p-3">
@@ -576,13 +597,13 @@ function Objects({ projectId }: { projectId: string }) {
   }, 10000, [projectId]);
   return (
     <div>
-      <h1 className="font-display text-lg font-semibold">Map objects</h1>
+      <h1 className="font-display text-base font-semibold tracking-[-0.01em]">Map objects</h1>
       <p className="mt-1 text-[12px] text-[var(--muted)]">
         Buildings, locations and other objects on this map. Approving a submission creates one.
       </p>
       <div className="mt-4 space-y-2">
-        {data === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
-        {data?.objects.length === 0 && <p className="text-sm text-[var(--muted)]">No objects yet.</p>}
+        {data === null && <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>}
+        {data?.objects.length === 0 && <p className="text-[12.5px] text-[var(--muted-2)]">No objects yet.</p>}
         {data?.objects.map((o) => (
           <div key={o.id} className="mwm-panel flex flex-wrap items-center gap-3 p-3">
             <p className="font-display text-[13.5px] font-semibold">{o.name}</p>
@@ -676,7 +697,7 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-lg font-semibold">API keys</h1>
+        <h1 className="font-display text-base font-semibold tracking-[-0.01em]">API keys</h1>
         {canManage && (
           <button type="button" className="mwm-btn mwm-btn-on" onClick={() => { setError(null); setCreating(true); }}>
             + Create key
@@ -727,7 +748,7 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
             </div>
           </div>
           {error && (
-            <p className="rounded border border-[var(--bad)] bg-[var(--bg-2)] p-2 text-[12px] text-[var(--bad)]">
+            <p className="mwm-alert" role="alert">
               {error}
             </p>
           )}
@@ -741,8 +762,8 @@ function Developers({ projectId, canManage }: { projectId: string; canManage: bo
       )}
 
       <div className="mt-4 space-y-2">
-        {data === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
-        {data?.keys.length === 0 && <p className="text-sm text-[var(--muted)]">No API keys yet.</p>}
+        {data === null && <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>}
+        {data?.keys.length === 0 && <p className="text-[12.5px] text-[var(--muted-2)]">No API keys yet.</p>}
         {data?.keys.map((k) => (
           <div key={k.id} className="mwm-panel p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -833,7 +854,7 @@ function Webhooks({ projectId, canManage }: { projectId: string; canManage: bool
 
   return (
     <div>
-      <h1 className="font-display text-lg font-semibold">Webhooks</h1>
+      <h1 className="font-display text-base font-semibold tracking-[-0.01em]">Webhooks</h1>
       <p className="mt-1 text-[12px] text-[var(--muted)]">
         Signed with HMAC-SHA256 (X-MyMap-Signature). Retries with exponential backoff.
       </p>
@@ -873,8 +894,8 @@ function Webhooks({ projectId, canManage }: { projectId: string; canManage: bool
       )}
 
       <div className="mt-4 space-y-2">
-        {data === null && <p className="text-sm text-[var(--muted)]">Loading…</p>}
-        {data?.webhooks.length === 0 && <p className="text-sm text-[var(--muted)]">No webhooks yet.</p>}
+        {data === null && <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>}
+        {data?.webhooks.length === 0 && <p className="text-[12.5px] text-[var(--muted-2)]">No webhooks yet.</p>}
         {data?.webhooks.map((w) => (
           <div key={w.id} className="mwm-panel flex flex-wrap items-center gap-2 p-3">
             <p className="min-w-0 flex-1 truncate text-[12.5px]">{w.url}</p>
@@ -920,7 +941,7 @@ function Embed({ projectId }: { projectId: string }) {
   );
   return (
     <div>
-      <h1 className="font-display text-lg font-semibold">Embed & share</h1>
+      <h1 className="font-display text-base font-semibold tracking-[-0.01em]">Embed & share</h1>
       <div className="mwm-panel mt-4 p-4">
         <label className="text-[12px] text-[var(--muted)]">Embed height (px)</label>
         <input className="mwm-input max-w-40" value={height} onChange={(e) => setHeight(e.target.value)} />

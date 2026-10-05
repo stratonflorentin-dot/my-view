@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
+const plexSans = localFont({
+  src: [
+    { path: "./fonts/IBMPlexSans-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IBMPlexSans-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/IBMPlexSans-SemiBold.woff2", weight: "600", style: "normal" },
+  ],
+  variable: "--font-plex-sans",
   display: "swap",
 });
 
-const grotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-grotesk",
+const plexMono = localFont({
+  src: [
+    { path: "./fonts/IBMPlexMono-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IBMPlexMono-Medium.woff2", weight: "500", style: "normal" },
+  ],
+  variable: "--font-plex-mono",
   display: "swap",
 });
 
@@ -26,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark">
       <body
-        className={`${manrope.variable} ${grotesk.variable} font-sans antialiased`}
+        className={`${plexSans.variable} ${plexMono.variable} font-sans antialiased`}
       >
         {children}
       </body>

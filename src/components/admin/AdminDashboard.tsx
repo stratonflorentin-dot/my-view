@@ -26,26 +26,47 @@ export default function AdminDashboard({ me }: { me: Me }) {
   };
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
-      <header className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] bg-[var(--bg-2)] px-4 py-2.5">
-        <Link href="/" className="font-display text-[14px] font-semibold">
-          <span className="text-[var(--accent)]">▰</span> Admin
+    <div className="min-h-dvh text-[var(--fg)]">
+      <header className="mwm-bar">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5 text-[var(--accent)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+            >
+              <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
+              <path d="M12 22V12M3 7l9 5 9-5" />
+            </svg>
+          </span>
+          <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
+            Admin
+          </span>
         </Link>
-        <span className="text-[11.5px] text-[var(--muted)]">{me.email}</span>
-        <div className="ml-auto flex items-center gap-1 text-[12px]">
+
+        <span className="hidden h-4 w-px bg-[var(--line-2)] sm:block" />
+
+        <span className="truncate text-[12.5px] text-[var(--muted)]">{me.email}</span>
+        <span className="mwm-badge badge-muted">admin</span>
+
+        <div className="ml-auto flex items-center gap-1">
           <Link href="/map" className="mwm-btn">Open Map</Link>
+          <span className="h-4 w-px bg-[var(--line)]" />
           <button type="button" onClick={logout} className="mwm-btn">
             Sign out
           </button>
         </div>
       </header>
 
-      <nav className="flex gap-1 overflow-x-auto border-b border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5">
+      <nav className="mwm-tabs">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
-            className={`mwm-btn shrink-0 ${tab === t.id ? "mwm-btn-on" : ""}`}
+            className="mwm-tab"
+            data-active={tab === t.id}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -53,7 +74,7 @@ export default function AdminDashboard({ me }: { me: Me }) {
         ))}
       </nav>
 
-      <main className="mx-auto max-w-6xl p-4">
+      <main className="mx-auto max-w-6xl px-4 py-5">
         {tab === "overview" && <Overview />}
         {tab === "links" && <Links />}
         {tab === "buildings" && <Buildings />}
@@ -105,7 +126,7 @@ function Overview() {
     if (!r.ok) throw new Error("stats unavailable");
     return (await r.json()) as Stats;
   }, 6000);
-  if (!s) return <p className="text-sm text-[var(--muted)]">Loading…</p>;
+  if (!s) return <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>;
   const jobs = s.jobsByStatus;
   const byStatus = s.buildingsByStatus;
   const cards: [string, number | string][] = [
@@ -591,7 +612,7 @@ function Settings() {
       .then((j) => j && setSettings(j.settings as Record<string, string>))
       .catch(() => {});
   }, []);
-  if (!settings) return <p className="text-sm text-[var(--muted)]">Loading…</p>;
+  if (!settings) return <p className="text-[12.5px] text-[var(--muted-2)]">Loading…</p>;
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setSettings({ ...settings, [k]: e.target.value });
   const save = async () => {

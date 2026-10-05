@@ -170,7 +170,10 @@ export function MapPageShell({
   const latest = detail?.versions[detail.versions.length - 1];
 
   return (
-    <div className="relative h-dvh bg-[var(--bg-2)]">
+    <div
+      className="relative h-dvh bg-[var(--bg-2)]"
+      style={{ ["--mwm-controls-top" as string]: "3.6rem" }}
+    >
       <MapView
         ref={mapRef}
         selectedId={selected}
@@ -236,10 +239,13 @@ export function MapPageShell({
             </div>
             <button
               type="button"
-              className="rounded p-1 text-[var(--muted)] hover:bg-[var(--hover)]"
+              className="rounded-[var(--r-1)] p-1 text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--fg)]"
               onClick={() => setSelected(null)}
+              aria-label="Close panel"
             >
-              ✕
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
             </button>
           </div>
 
