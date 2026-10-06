@@ -39,7 +39,11 @@ export type FramePadding = { top: number; bottom: number; left: number; right: n
 const FOV_DEFAULT = 0.6435; // rad — MapLibre default vertical FOV (~36.87°)
 const PITCH_DEG = 55; // professional three-quarter view
 const BEARING_DEG = 30; // front + side visible
-const MIN_DISTANCE_M = 15;
+const MIN_DISTANCE_M = 25;
+/** Hard zoom cap. Raster basemaps are true-resolution only to ~z18;
+ *  framing beyond that renders an unusable over-zoomed blur. The 3D
+ *  extrusion stays crisp (vector), but the view must stay readable. */
+const MAX_ZOOM = 19;
 
 /** Meters-per-pixel at zoom z and latitude lat (Web-Mercator). */
 function mppForZoom(zoom: number, lat: number): number {
@@ -55,8 +59,9 @@ export function boundsRadiusM(bounds: FrameBounds): number {
   return Math.hypot(wM, dM) / 2;
 }
 
-/** Bounds of a point "building" (no footprint yet) with a given radius in m. */
-export function pointBounds(lng: number, lat: number, radiusM = 7): FrameBounds {
+/** Bounds of a point "building" (no footprint yet). Radius keeps enough
+ *  ground context that the view stays readable at the zoom cap. */
+export function pointBounds(lng: number, lat: number, radiusM = 18): FrameBounds {
   const dx = radiusM / (111320 * Math.cos((lat * Math.PI) / 180));
   const dy = radiusM / 110574;
   return [
@@ -142,8 +147,10 @@ export function computeBuildingCamera(
 
   const d = Math.max(dTop, dNear, dFar, dSide, MIN_DISTANCE_M);
   const slant = d / Math.cos(delta);
-  const mpp = (2 * slant * Math.tan(fov / 2)) / canvasH;
-  const zoom = Math.min(21, Math.max(11, Math.log2(mppForZoom(0, lat) / mpp)));
+  // Floor the ground resolution so the derived zoom never asks the basemap
+  // for detail it does not have (over-zoom blur).
+  const mpp = Math.max((2 * slant * Math.tan(fov / 2)) / canvasH, 0.3);
+  const zoom = Math.min(MAX_ZOOM, Math.max(11, Math.log2(mppForZoom(0, lat) / mpp)));
 
   return {
     zoom,
