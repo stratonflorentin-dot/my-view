@@ -9,6 +9,7 @@ const MapView = dynamic(
   { ssr: false },
 );
 import type { MapViewHandle } from "./MapView";
+import { effectiveHeightM, type FramePadding } from "./camera";
 
 type Detail = {
   building: {
@@ -87,6 +88,17 @@ function groupCapturesByAngle(captures: Detail["captures"]) {
   return groups;
 }
 
+/** Viewport area covered by the panel, so camera framing fits the
+ *  REMAINING map space. Mobile (<640px): bottom sheet ≈ 46dvh.
+ *  Desktop: right-hand panel ≈ 24rem + gutter. */
+function panelPadding(open: boolean): FramePadding | null {
+  if (!open || typeof window === "undefined") return null;
+  if (window.innerWidth < 640) {
+    return { top: 0, bottom: Math.round(window.innerHeight * 0.46), left: 0, right: 0 };
+  }
+  return { top: 0, bottom: 0, left: 0, right: 400 };
+}
+
 export function MapPageShell({
   visibility,
   initialBuildingId = null,
@@ -102,6 +114,9 @@ export function MapPageShell({
   const mapRef = useRef<MapViewHandle>(null);
   const flyRef = useRef<string | null>(null);
   if (initialBuildingId) flyRef.current = initialBuildingId;
+  const panelOpenRef = useRef(panelOpen);
+  panelOpenRef.current = panelOpen;
+  const framedRef = useRef<{ id: string; heightM: number } | null>(null);
 
   useEffect(() => {
     void fetch("/api/auth/me")
@@ -126,13 +141,48 @@ export function MapPageShell({
     else setDetail(null);
   }, [selected, load]);
 
-  // Fly to the building once the map has its data (first render race).
+  // Frame the building once its dossier (height/floors) has loaded. The map
+  // computes the camera from real footprint bounds + height — never a
+  // hard-coded zoom.
   useEffect(() => {
-    if (detail && flyRef.current === detail.building.id) {
-      mapRef.current?.flyTo(detail.building.centerLng, detail.building.centerLat, 17);
-      flyRef.current = null;
-    }
+    if (!detail || flyRef.current !== detail.building.id) return;
+    const v = detail.versions[detail.versions.length - 1];
+    const h = effectiveHeightM(v?.heightM ?? null, v?.floors ?? null);
+    framedRef.current = { id: detail.building.id, heightM: h };
+    mapRef.current?.focusBuilding(
+      detail.building.id,
+      h,
+      panelPadding(panelOpenRef.current),
+      [detail.building.centerLng, detail.building.centerLat],
+    );
+    flyRef.current = null;
   }, [detail]);
+
+  // Panel opens/closes → the usable viewport changes → re-frame the
+  // focused building into the remaining space.
+  useEffect(() => {
+    const f = framedRef.current;
+    if (!f) return;
+    mapRef.current?.focusBuilding(f.id, f.heightM, panelPadding(panelOpen));
+  }, [panelOpen]);
+
+  const refocusBuilding = () => {
+    if (!detail) return;
+    const v = detail.versions[detail.versions.length - 1];
+    const h = effectiveHeightM(v?.heightM ?? null, v?.floors ?? null);
+    framedRef.current = { id: detail.building.id, heightM: h };
+    mapRef.current?.focusBuilding(
+      detail.building.id,
+      h,
+      panelPadding(panelOpen),
+      [detail.building.centerLng, detail.building.centerLat],
+    );
+  };
+
+  const resetView = () => {
+    framedRef.current = null;
+    mapRef.current?.resetView();
+  };
 
   const act = async (action: string, extra?: Record<string, unknown>) => {
     if (!detail) return;
@@ -218,9 +268,13 @@ export function MapPageShell({
         </div>
       </div>
 
-      {/* Building panel */}
+      {/* Building panel — bottom sheet on mobile, side panel on desktop */}
       {selected && (
-        <div className="mwm-panel absolute bottom-4 right-3 top-16 z-30 flex w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden">
+        <div
+          className={`mwm-panel absolute z-30 flex flex-col overflow-hidden ${
+            panelOpen ? "" : "hidden"
+          } inset-x-0 bottom-0 max-h-[46dvh] w-full sm:inset-x-auto sm:bottom-4 sm:right-3 sm:top-16 sm:max-h-none sm:w-[min(24rem,calc(100vw-1.5rem))]`}
+        >
           <div className="flex items-start justify-between gap-2 border-b border-[var(--line)] p-3">
             <div className="min-w-0">
               <h2 className="truncate font-display text-[15px] font-semibold">
@@ -254,6 +308,23 @@ export function MapPageShell({
             {loading && <p className="text-[var(--muted)]">Loading dossier…</p>}
             {detail && (
               <>
+                <div className="mb-3 flex gap-1.5">
+                  <button
+                    type="button"
+                    className="mwm-primary flex-1 !py-1.5 !text-[11.5px]"
+                    onClick={refocusBuilding}
+                  >
+                    Focus building
+                  </button>
+                  <button
+                    type="button"
+                    className="mwm-ghost flex-1 !py-1.5 !text-[11.5px]"
+                    onClick={resetView}
+                  >
+                    Reset view
+                  </button>
+                </div>
+
                 <div className="flex flex-wrap gap-1.5">
                   <span
                     className={`mwm-badge ${

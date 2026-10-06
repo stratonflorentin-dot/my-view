@@ -10,6 +10,14 @@ import {
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapControls, type MapMode } from "./MapControls";
+import {
+  frameBuilding,
+  pointBounds,
+  polygonBounds,
+  type FrameBounds,
+  type FrameInput,
+  type FramePadding,
+} from "./camera";
 
 // MapLibre + Turbopack: the bundler-generated worker URL does not resolve in
 // the browser ("Worker failed to load" → blank map). Pin the prebuilt worker
@@ -33,6 +41,16 @@ maplibregl.setWorkerUrl("/maplibre-gl-worker.mjs");
 
 export type MapViewHandle = {
   flyTo: (lng: number, lat: number, zoom?: number) => void;
+  /** Frame the complete building (base → roof) in the visible viewport.
+   *  `fallbackCenter` flies there first when geometry isn't cached yet. */
+  focusBuilding: (
+    id: string,
+    heightM: number | null,
+    padding?: FramePadding | null,
+    fallbackCenter?: [number, number],
+  ) => void;
+  /** Return to the camera state from before the last focusBuilding. */
+  resetView: () => void;
 };
 
 type Props = {
@@ -192,12 +210,97 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
   const onSelectRef = useRef(onSelectBuilding);
   onSelectRef.current = onSelectBuilding;
   const fetchSeq = useRef(0);
+  /** Real footprint bounds per building id, from the last features fetch. */
+  const geomCacheRef = useRef(new Map<string, { bounds: FrameBounds; center: [number, number] }>());
+  const lastFrameRef = useRef<{ id: string; input: FrameInput; padding: FramePadding | null } | null>(null);
+  const prevCameraRef = useRef<{ center: [number, number]; zoom: number; pitch: number; bearing: number } | null>(null);
+  const focusedRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     flyTo: (lng, lat, zoom = 17) => {
       mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1400 });
     },
+    focusBuilding: (id, heightM, padding = null, fallbackCenter) => {
+      const map = mapRef.current;
+      if (!map) return;
+      if (!focusedRef.current) {
+        const c = map.getCenter();
+        prevCameraRef.current = {
+          center: [c.lng, c.lat],
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        };
+      }
+      focusedRef.current = true;
+      const cached = geomCacheRef.current.get(id);
+      if (!cached) {
+        // Geometry not fetched yet — record focus intent; the features
+        // loader frames the building once its real footprint arrives.
+        // If it is outside the current bbox, fly to the fallback center
+        // first so the next viewport fetch includes it.
+        lastFrameRef.current = {
+          id,
+          input: { bounds: pointBounds(0, 0, 0), center: [0, 0], heightM: heightM ?? 10 },
+          padding,
+        };
+        if (fallbackCenter) {
+          map.flyTo({
+            center: fallbackCenter,
+            zoom: Math.max(map.getZoom(), 16.5),
+            duration: 1200,
+            essential: true,
+          });
+        }
+        return;
+      }
+      const input: FrameInput = {
+        bounds: cached.bounds,
+        center: cached.center,
+        heightM: heightM ?? 10,
+      };
+      lastFrameRef.current = { id, input, padding };
+      frameBuilding(map, input, { padding });
+    },
+    resetView: () => {
+      const map = mapRef.current;
+      if (!map) return;
+      focusedRef.current = false;
+      lastFrameRef.current = null;
+      map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+      const prev = prevCameraRef.current;
+      if (prev) {
+        map.flyTo({ ...prev, duration: 1000, essential: true });
+        prevCameraRef.current = null;
+      }
+    },
   }));
+
+  // Re-frame the focused building when the usable viewport changes
+  // (panel toggle, browser resize, phone rotation, fullscreen).
+  useEffect(() => {
+    const reframe = () => {
+      const map = mapRef.current;
+      const lf = lastFrameRef.current;
+      if (!map || !lf || !focusedRef.current) return;
+      frameBuilding(map, lf.input, { padding: lf.padding, duration: 500 });
+    };
+    window.addEventListener("resize", reframe);
+    document.addEventListener("fullscreenchange", reframe);
+    return () => {
+      window.removeEventListener("resize", reframe);
+      document.removeEventListener("fullscreenchange", reframe);
+    };
+  }, []);
+
+  // Deselect → drop framing state and restore full-viewport padding.
+  useEffect(() => {
+    if (selectedId === null) {
+      focusedRef.current = false;
+      lastFrameRef.current = null;
+      mapRef.current?.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+    }
+  }, [selectedId]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -208,7 +311,7 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
     if (!preview) {
       const m = /#map=([\d.]+)\/(-?[\d.]+)\/(-?[\d.]+)/.exec(window.location.hash);
       if (m) {
-        initZoom = Math.min(19, Math.max(2, Number(m[1])));
+        initZoom = Math.min(21, Math.max(2, Number(m[1])));
         initCenter = [Number(m[3]), Number(m[2])];
       }
     }
@@ -222,7 +325,7 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
       zoom: initZoom,
       pitch: preview ? 35 : 62,
       minZoom: 2,
-      maxZoom: 19,
+      maxZoom: 21, // framing may derive zoom > 19 for small buildings
       attributionControl: false,
     });
     mapRef.current = map;
@@ -507,6 +610,20 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
         onSelectRef.current?.(id ?? null);
       });
 
+      // Double-click a building → select + auto-frame it (suppresses the
+      // default double-click zoom only when a building was hit).
+      map.on("dblclick", (e: maplibregl.MapMouseEvent) => {
+        if (preview || measureRef.current) return;
+        const feats = map.queryRenderedFeatures(e.point, {
+          layers: ["buildings-3d", "buildings-fill", "buildings-outline", "buildings-point"],
+        });
+        const id = (feats[0]?.properties as { id?: string } | undefined)?.id;
+        if (id) {
+          e.preventDefault();
+          onSelectRef.current?.(id);
+        }
+      });
+
       // Viewport-scoped data loading (debounced moveend).
       let t: ReturnType<typeof setTimeout> | undefined;
       const load = () => {
@@ -533,6 +650,53 @@ export const MapView = forwardRef<MapViewHandle, Props>(function MapView(
                 f.id = i;
               });
               src?.setData(fc);
+
+              // Cache real footprint geometry per building for camera framing.
+              if (k === "buildings") {
+                for (const f of fc.features) {
+                  const bid = (f.properties as { id?: string } | undefined)?.id;
+                  if (!bid) continue;
+                  const geom = f.geometry;
+                  let bounds: FrameBounds | null =
+                    geom?.type === "Polygon" ? polygonBounds(geom) : null;
+                  const props = f.properties as
+                    | { centerLng?: number; centerLat?: number }
+                    | undefined;
+                  let center: [number, number] | null =
+                    props?.centerLng != null && props?.centerLat != null
+                      ? [props.centerLng, props.centerLat]
+                      : geom?.type === "Point"
+                        ? [geom.coordinates[0], geom.coordinates[1]]
+                        : bounds
+                          ? [
+                              (bounds[0][0] + bounds[1][0]) / 2,
+                              (bounds[0][1] + bounds[1][1]) / 2,
+                            ]
+                          : null;
+                  if (!center) continue;
+                  if (!bounds) bounds = pointBounds(center[0], center[1]);
+                  const prev = geomCacheRef.current.get(bid);
+                  geomCacheRef.current.set(bid, { bounds, center });
+
+                  // Focused building's real footprint just arrived (or
+                  // changed) — refine the framing with actual geometry.
+                  // `prev === undefined` covers the deep-link case where the
+                  // initial focusBuilding was a no-op (no geometry cached yet).
+                  if (
+                    focusedRef.current &&
+                    lastFrameRef.current?.id === bid &&
+                    (prev === undefined ||
+                      prev.bounds[0][0] !== bounds[0][0] ||
+                      prev.bounds[0][1] !== bounds[0][1] ||
+                      prev.bounds[1][0] !== bounds[1][0] ||
+                      prev.bounds[1][1] !== bounds[1][1])
+                  ) {
+                    const lf = lastFrameRef.current;
+                    lf.input = { bounds, center, heightM: lf.input.heightM };
+                    frameBuilding(map, lf.input, { padding: lf.padding, duration: 800 });
+                  }
+                }
+              }
             }
           })
           .catch(() => {});
