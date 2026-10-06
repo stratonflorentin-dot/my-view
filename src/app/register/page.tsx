@@ -42,12 +42,13 @@ export default function RegisterPage() {
           </span>
         </Link>
 
-        <p className="mwm-eyebrow mt-6">Authentication</p>
+        <p className="mwm-eyebrow mt-6">Create account</p>
         <h1 className="mt-1 font-display text-[17px] font-semibold tracking-[-0.01em]">
-          Create a viewer account
+          Create your mapping account
         </h1>
         <p className="mt-1 text-[12.5px] text-[var(--muted)]">
-          Viewer accounts can explore the map when it is not private.
+          Build your own maps, collect scans from contributors, and publish
+          them through the API — just like a cloud mapping platform.
         </p>
 
         <form onSubmit={submit} className="mt-5 space-y-2.5">
