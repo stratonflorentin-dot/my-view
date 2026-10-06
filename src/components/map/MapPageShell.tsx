@@ -189,10 +189,11 @@ export function MapPageShell({
           href="/"
           className="mwm-panel pointer-events-auto flex items-center gap-2 px-3 py-2"
         >
-          <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
-            <path d="M12 22V12M3 7l9 5 9-5" />
-          </svg>
+          <img
+            src="/logo.png"
+            alt="My View"
+            className="h-6 w-6 flex-none rounded-[var(--r-1)] object-cover"
+          />
           <span className="font-display text-[13px] font-semibold">
             3D Map
           </span>

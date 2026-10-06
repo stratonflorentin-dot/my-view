@@ -37,12 +37,11 @@ export default async function Landing() {
       <header className="border-b border-[var(--line)] bg-[var(--bg-2)]">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[var(--accent)]" fill="none" stroke="currentColor" strokeWidth="1.9">
-                <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
-                <path d="M12 22V12M3 7l9 5 9-5" />
-              </svg>
-            </span>
+            <img
+              src="/logo.png"
+              alt="My View"
+              className="h-8 w-8 flex-none rounded-[var(--r-2)] border border-[var(--line-2)] object-cover"
+            />
             <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
               {settings.platform_name}
             </span>

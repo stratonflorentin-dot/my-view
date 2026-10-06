@@ -37,11 +37,13 @@ function LoginForm() {
     <div className="flex min-h-dvh items-center justify-center p-5">
       <div className="mwm-auth mwm-panel p-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-[var(--r-2)] border border-[var(--line-2)] bg-[var(--bg-3)]">
-            <BrandMark />
-          </span>
+          <img
+            src="/logo.png"
+            alt="My View"
+            className="h-8 w-8 flex-none rounded-[var(--r-2)] border border-[var(--line-2)] object-cover"
+          />
           <span className="font-display text-[13.5px] font-semibold tracking-[-0.01em]">
-            MyWorld 3D Map
+            My View
           </span>
         </Link>
 
@@ -109,22 +111,6 @@ function LoginForm() {
         </p>
       </div>
     </div>
-  );
-}
-
-function BrandMark() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5 text-[var(--accent)]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      aria-hidden="true"
-    >
-      <path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z" />
-      <path d="M12 22V12M3 7l9 5 9-5" />
-    </svg>
   );
 }
 

@@ -22,9 +22,13 @@ const plexMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "MyWorld 3D Map",
+  title: "My View — 3D Mapping Platform",
   description:
     "A private, contributor-driven 3D mapping platform. Capture with your phone, reconstruct with AI-assisted photogrammetry, and grow your own living 3D map.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
