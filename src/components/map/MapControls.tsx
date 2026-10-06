@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type MapMode = "2d" | "3d";
-export type Basemap = "satellite" | "dark";
-export type LayerState = { buildings: boolean; captures: boolean; coverage: boolean };
+export type MapMode = "2d" | "3d" | "globe";
+export type Basemap = "satellite" | "dark" | "streets";
+export type LayerState = {
+  buildings: boolean;
+  captures: boolean;
+  coverage: boolean;
+  heatmap: boolean;
+  labels: boolean;
+};
 
 type Props = {
   mode: MapMode;
@@ -22,6 +28,9 @@ type Props = {
   onLocate: () => void;
   locating: boolean;
   tracking: boolean;
+  measure: boolean;
+  onMeasure: (v: boolean) => void;
+  onShareView: () => void;
 };
 
 const Icon2D = () => (
@@ -35,6 +44,12 @@ const Icon3D = () => (
     <path d="M12 22V12M3 7l9 5 9-5" />
   </svg>
 );
+const IconGlobe = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+  </svg>
+);
 const IconSat = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M13 7 9 3 5 7l4 4M17 11l4 4-4 4-4-4M8 12l4 4 6-6-4-4ZM16 8l3-3" />
@@ -45,9 +60,29 @@ const IconDark = () => (
     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
   </svg>
 );
+const IconStreets = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M4 19 9 5l3 8 2.5-5L20 19" />
+    <path d="M2 19h20" />
+  </svg>
+);
 const IconMountain = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="m8 3 4 8 5-5 5 15H2L8 3Z" />
+  </svg>
+);
+const IconRuler = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="2" y="9" width="20" height="6" rx="1" transform="rotate(-35 12 12)" />
+    <path d="m8.5 6.5 1.5 2M12 4l1.5 2M15.5 1.9 17 3.9M6.4 8.9l1.5 2" />
+  </svg>
+);
+const IconShare = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <circle cx="6" cy="12" r="2.5" />
+    <circle cx="18" cy="6" r="2.5" />
+    <circle cx="18" cy="18" r="2.5" />
+    <path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6" />
   </svg>
 );
 const IconExpand = () => (
@@ -105,6 +140,15 @@ export function MapControls(p: Props) {
           >
             <Icon3D /> 3D
           </button>
+          <button
+            type="button"
+            className={`mwm-btn ${p.mode === "globe" ? "mwm-btn-sel" : ""}`}
+            onClick={() => p.onMode("globe")}
+            title="Globe view"
+            aria-pressed={p.mode === "globe"}
+          >
+            <IconGlobe /> Globe
+          </button>
         </div>
         <div className="flex gap-1">
           <button
@@ -127,6 +171,15 @@ export function MapControls(p: Props) {
           </button>
           <button
             type="button"
+            className={`mwm-btn ${p.basemap === "streets" ? "mwm-btn-sel" : ""}`}
+            onClick={() => p.onBasemap("streets")}
+            title="Street map"
+            aria-pressed={p.basemap === "streets"}
+          >
+            <IconStreets /> Streets
+          </button>
+          <button
+            type="button"
             className={`mwm-btn ${p.terrain ? "mwm-btn-sel" : ""}`}
             onClick={() => p.onTerrain(!p.terrain)}
             title="Terrain relief"
@@ -137,7 +190,7 @@ export function MapControls(p: Props) {
         </div>
       </div>
 
-      {/* Top-right: search + layers + fullscreen */}
+      {/* Top-right: tools + search + layers + fullscreen */}
       <div
         className="absolute right-3 z-20 flex flex-col items-end gap-2"
         style={{ top: "var(--mwm-controls-top, 0.75rem)" }}
@@ -152,6 +205,15 @@ export function MapControls(p: Props) {
             disabled={p.locating}
           >
             <IconLocate />
+          </button>
+          <button
+            type="button"
+            className={`mwm-panel mwm-btn ${p.measure ? "mwm-btn-sel" : ""}`}
+            onClick={() => p.onMeasure(!p.measure)}
+            title={p.measure ? "Exit measure tool" : "Measure distance / area"}
+            aria-pressed={p.measure}
+          >
+            <IconRuler />
           </button>
           <button
             type="button"
@@ -174,6 +236,14 @@ export function MapControls(p: Props) {
           <button
             type="button"
             className="mwm-panel mwm-btn"
+            onClick={p.onShareView}
+            title="Copy link to this view"
+          >
+            <IconShare />
+          </button>
+          <button
+            type="button"
+            className="mwm-panel mwm-btn"
             onClick={p.onFullscreen}
             title="Full screen"
           >
@@ -188,6 +258,8 @@ export function MapControls(p: Props) {
                 ["buildings", "3D buildings"],
                 ["captures", "Capture positions"],
                 ["coverage", "Coverage grid"],
+                ["heatmap", "Capture heatmap"],
+                ["labels", "Place labels"],
               ] as const
             ).map(([k, label]) => (
               <label
